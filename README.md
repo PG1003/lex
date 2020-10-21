@@ -5,12 +5,12 @@ This is a C++ port of Lua's functions for pattern matching.
 Lua comes with a minimalistic pattern matching capability with features you won't find in common regular expressions implementations.
 This library provides an easy integration of Lua style pattern matching into your program.
 
-The library is tested by a simple (test program)[https://github.com/PG1003/lex/blob/master/test/tests.cpp] that includes test cases for pattern matching from the Lua test suite.
+The library is tested by a simple [test program](https://github.com/PG1003/lex/blob/master/test/tests.cpp) that includes test cases for pattern matching from the Lua test suite.
 There are dditional tests to verify parts that are specific for the implementation of this library.  
 You can also use the test program to toy with the library.
 
 This project doesn't include makefiles or project files to build the library.
-Integration in your own build environment should be easy since the library consists of only 2 source files ((lex.h)[https://github.com/PG1003/lex/blob/master/src/lex.h] and (lex.cpp)[https://github.com/PG1003/lex/blob/master/src/lex.cpp]) without any external dependencies.
+Integration in your own build environment should be easy since the library consists of only 2 source files ([lex.h](https://github.com/PG1003/lex/blob/master/src/lex.h) and [lex.cpp](https://github.com/PG1003/lex/blob/master/src/lex.cpp)) without any external dependencies.
 
 ## Features
 
@@ -23,9 +23,9 @@ You can read more about the patterns and its features in the [Lua reference manu
   * All the ```std::string``` variants.
   * All the ```std::string_view``` variants.
   * Character pointers and arrays of type ```char```, ```wchar_t```, ```char16_t``` and ```char32_t```.
-* ```match``` matching a string with a pattern.
-* ```gsub``` substitute matching patterns with a replacement pattern or the result of a function.
-* Iterate over a string with a pattern like ```gmatch``` in Lua.
+* Matching a string with a pattern.
+* Substitute matching patterns with a replacement pattern or the result of a function.
+* Iterate over a string with a pattern.
 
 ## Requirements
 
