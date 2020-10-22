@@ -7,6 +7,7 @@
 #include <string_view>
 #include <type_traits>
 #include <numeric>
+#include <vector>
 
 #include "lex.h"
 
