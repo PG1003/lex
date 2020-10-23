@@ -6,7 +6,7 @@ Lua comes with a minimalistic pattern matching capability with features you won'
 This library provides an easy integration of Lua style pattern matching into your program.
 
 The library is tested by a simple [test program](https://github.com/PG1003/lex/blob/master/test/tests.cpp) that includes test cases for pattern matching from the Lua test suite.
-There are dditional tests to verify parts that are specific for the implementation of this library.  
+There are additional tests to verify parts that are specific for the implementation of this library.  
 You can also use the test program to toy with the library.
 
 This project doesn't include makefiles or project files to build the library.
@@ -24,7 +24,7 @@ You can read more about the patterns and its features in the [Lua reference manu
   * All the ```std::string_view``` variants.
   * Character pointers and arrays of type ```char```, ```wchar_t```, ```char16_t``` and ```char32_t```.
 * Matching a string with a pattern.
-* Substitute matching patterns with a replacement pattern or the result of a function.
+* Substitute matching pattern with a replacement pattern or the result of a function.
 * Iterate over a string with a pattern.
 
 ## Requirements
@@ -155,7 +155,7 @@ The following predefined match result types are made available in the ```pg::lex
 | ```char32_t``` | ```u32match_result``` |
 
 You can iterate over the captures of a match result; it has ```begin``` and ```end``` member functions that return a random access iterator.
-A match result iterator returns a string view when it is dereferenced.
+A match result iterator returns a string view when it is dereferenced.  
 Match results can also be used with range based for-loops. 
 
 ### Match
@@ -168,12 +168,12 @@ An empty match result is returned when no match was found.
 To itereate over matches in a string you must create a context.
 A context is a ```pg::lex::context``` object with a reference to a input string and a pattern.
 
-You get a ```pg::lex::gmatch_iterator``` by calling the ```pg::lex::begin``` and ```pg::lex::end``` free functions with a context as parameter.
+You get a ```pg::lex::gmatch_iterator``` by calling the ```pg::lex::begin``` and ```pg::lex::end``` functions with a context as parameter.
 A ```pg::lex::gmatch_iterator``` behaves as a forward iterator; it can only advance with the ```++``` operator.
 Gmatch iterators return match results when you dereference them. 
 
 The ```pg::lex::begin``` function creates an iterator and searches for the first match in the input string.
-The returned iterator is equal to the end iterator returned by ```pg::lex::end``` when no match was found.
+The returned iterator is equal to the iterator returned by ```pg::lex::end``` when no match was found.
 
 A context also works with a ranged based for-loop.
 
@@ -190,5 +190,5 @@ The function must accept a match result, that is templated on the character type
 
 The count parameter limits number of substitutes with a negative value for an unlimited count.
 
-The ```string.gsub``` function in Lua supports also tables as lookup for replacements.
-This library doesn't have an overload to support this Lua feature since there is no equivalent in C++ for Lua like tables.
+The ```string.gsub``` function in Lua also supports tables as lookup for replacements.
+This library doesn't support this Lua feature.
