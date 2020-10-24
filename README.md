@@ -139,6 +139,13 @@ Output:
 The documentation here describes the usage of this library.  
 Details about the patterns are documented [here](http://www.lua.org/manual/5.4/manual.html#6.4.1) in the Lua reference manual.
 
+### Lex errors
+
+This library throws exceptions of the ```pg::lex:lex_error``` type which is derived from ```std::runtime_error```.
+The errors emitted by Lua regarding to pattern matching are thrown too by this library.
+
+You can get the exception description and number by calling the ```what()``` and ```code()``` member functions.
+
 ### Match result
 
 A successful match returns a match result that contains one or more captures, the position and size of the matched substring. 
