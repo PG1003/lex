@@ -95,7 +95,7 @@ bool pg::lex::detail::match_class( int c, int cl ) noexcept
         case 'u' : res = std::isupper( c ); break;
         case 'w' : res = std::isalnum( c ); break;
         case 'x' : res = std::isxdigit( c ); break;
-        case 'z' : res = (c == 0); break;  /* deprecated option */
+        case 'z' : res = (c == 0); break;  // Deprecated option
         default: return cl == c;
     }
     return std::islower( cl ) ? res : !res;

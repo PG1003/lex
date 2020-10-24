@@ -32,12 +32,12 @@
 #include <type_traits>
 
 
-/* maximum recursion depth for 'match' */
+// Maximum recursion depth for 'match'
 #if !defined(MAXCCALLS)
 #define MAXCCALLS   200
 #endif
 
-/* maximum number of captures that a pattern can do during pattern-matching. */
+// Maximum number of captures that a pattern can do during pattern-matching.
 #if !defined(MAXCAPTURES)
 #define MAXCAPTURES     32
 #endif
@@ -138,7 +138,7 @@ private:
     friend struct detail::match_state;
 
     std::pair< long, long >  pos   = { -1, -1 };  // The indices where the match starts and ends
-    int                      level = 0;           /* total number of captures (finished or unfinished) */
+    int                      level = 0;           // Total number of captures (finished or unfinished)
     detail::capture< CharT > captures[ MAXCAPTURES ];
 
 public:
@@ -192,7 +192,7 @@ public:
     iterator begin() const noexcept { return { captures }; }
 
     /**
-     * \brief Returns an iterator to the end of the capture list,
+     * \brief Returns an iterator to the end of the capture list.
      */
     iterator end() const noexcept { return { captures + size() }; }
 
@@ -202,14 +202,14 @@ public:
     size_t size() const noexcept { return level; }
 
     /**
-     * \brief
+     * \brief Conversion to bool for easy evaluation if the match result contains match data.
      */
     operator bool() const noexcept { return level > 0; }
 
     /**
      * \brief Returns a std::string_view of the requested capture.
      *
-     * This function thows an 'capture_out_of_range' when match result doesn't have a capture at the requested index.
+     * This function thows a 'capture_out_of_range' when match result doesn't have a capture at the requested index.
      */
     std::basic_string_view< CharT > at( size_t i ) const
     {
@@ -282,10 +282,10 @@ struct match_state
     const StrCharT * const s_begin;
     const StrCharT * const s_end;
     const PatCharT * const p_end;
-    int                    matchdepth = MAXCCALLS;  /* control for recursive depth (to avoid stack overflow) */
+    int                    matchdepth = MAXCCALLS;  // Control for recursive depth (to avoid stack overflow)
 
-    int &                         level;  /* total number of captures (finished or unfinished) */
-    detail::capture< StrCharT > * captures;// ( & captures )[ MAXCAPTURES ];
+    int &                         level;            // Total number of captures (finished or unfinished)
+    detail::capture< StrCharT > * captures;
     std::pair< long, long > &     pos;
 };
 
@@ -313,7 +313,7 @@ const PatCharT * classend( const MS &ms, const PatCharT * p )
         {
             ++p;
         }
-        do  /* look for a ']' */
+        do  // Look for a ']'
         {
             if( p == ms.p_end )
             {
@@ -321,7 +321,7 @@ const PatCharT * classend( const MS &ms, const PatCharT * p )
             }
             if( *p++ == '%' && p < ms.p_end )
             {
-                ++p;  /* skip escapes (e.g. '%]') */
+                ++p;  // Skip escapes (e.g. '%]')
             }
         } while( *p != ']' );
 
@@ -345,7 +345,7 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
     if( *( p + 1 ) == '^' )
     {
         ret = false;
-        p++;  /* skip the '^' */
+        p++;  // Skip the '^'
     }
     while( ++p < ep )
     {
@@ -389,7 +389,7 @@ bool singlematch( const MS &ms, const StrCharT * s, const PatCharT * p, const Pa
         switch( *p )
         {
         case '.':
-            return true;  /* matches any char */
+            return true;  // Matches any char
 
         case '%':
             return match_class( c, *( p + 1 ) );
@@ -449,7 +449,7 @@ const StrCharT * max_expand( MS &ms, const StrCharT * s, const PatCharT * p, con
     {
         ++i;
     }
-    /* keeps trying to match with the maximum repetitions */
+    // Keeps trying to match with the maximum repetitions
     while( i >= 0 )
     {
         if( auto res = match( ms, s + i, ep + 1 ) )
@@ -487,8 +487,6 @@ const StrCharT * min_expand( MS &ms, const StrCharT * s, const PatCharT * p, con
 template< typename MS, typename StrCharT, typename PatCharT >
 auto start_capture( MS &ms, const StrCharT * s, const PatCharT * p )
 {
-    assert( s );
-
     if( ms.level >= MAXCAPTURES )
     {
         throw lex_error( capture_too_many );
@@ -571,7 +569,7 @@ const StrCharT * match( MS &ms, const StrCharT * s, const PatCharT * p )
 {
 	const matchdepth_sentinel mds( ms.matchdepth );
 
-    init: /* using goto's to optimize tail recursion */
+    init: // Using goto's to optimize tail recursion
     if( p == ms.p_end )
     {
         return s;
@@ -580,36 +578,36 @@ const StrCharT * match( MS &ms, const StrCharT * s, const PatCharT * p )
     {
         switch( *p )
         {
-        case '(':  /* start capture */
+        case '(':  // Start capture
             return start_capture( ms, s, p + 1 );
 
-        case ')':  /* end capture */
+        case ')':  // End capture
             return end_capture( ms, s, p + 1 );
 
         case '$':
-            if( ( p + 1 ) != ms.p_end )  /* is the '$' the last char in pattern? */
+            if( ( p + 1 ) != ms.p_end )  // Is the '$' the last char in pattern?
             {
-                goto dflt;  /* no; go to default */
+                goto dflt;  // No; go to default
             }
             if( s == ms.s_end )
             {
-                return s;  /* check end of string */
+                return s;  // Check end of string
             }
             break;
 
-        case '%':  /* escaped sequences not in the format class[*+?-]? */
+        case '%':  // Escaped sequences not in the format class[*+?-]?
             switch( *( p + 1 ) )
             {
-            case 'b':  /* balanced string? */
+            case 'b':  // Balanced string?
                 if( auto res = matchbalance( ms, s, p + 2 ) )
                 {
                     s  = res;
                     p += 4;
-                    goto init;  /* return match( ms, s, p + 4 ); */
+                    goto init;  // Return match( ms, s, p + 4 )
                 }
                 return nullptr;
 
-            case 'f':  /* frontier? */
+            case 'f':  // Frontier?
                 p += 2;
                 if( *p != '[' )
                 {
@@ -617,68 +615,68 @@ const StrCharT * match( MS &ms, const StrCharT * s, const PatCharT * p )
                 }
                 else
                 {
-                    const PatCharT * ep = classend( ms, p );  /* points to what is next */
+                    const PatCharT * ep = classend( ms, p );  // Points to what is next
                     auto previous   = ( s == ms.s_begin ) ? '\0' : *( s - 1 );
                     if( !matchbracketclass( previous, p, ep - 1 ) &&
                          matchbracketclass( *s, p, ep - 1 ) )
                     {
                         p = ep;
-                        goto init;  /* return match( ms, s, ep ); */
+                        goto init;  // Return match( ms, s, ep )
                     }
                 }
                 return nullptr;
 
             case '0': case '1': case '2': case '3': case '4':
-            case '5': case '6': case '7': case '8': case '9':  /* capture results (%0-%9)? */
+            case '5': case '6': case '7': case '8': case '9':  // Capture results (%0-%9)?
                 if( auto res = match_capture( ms, s, *( p + 1 ) ) )
                 {
                     s  = res;
                     p += 2;
-                    goto init;  /* return match( ms, s, p + 2 ) */
+                    goto init;  // Return match( ms, s, p + 2 )
                 }
                 break;
             }
 
         // Fallthrough
-        default:  /* pattern class plus optional suffix */
+        default:  // Pattern class plus optional suffix
         dflt:
         {
-            const PatCharT * ep = classend( ms, p );  /* points to optional suffix */
+            const PatCharT * ep = classend( ms, p );  // Points to optional suffix
             if( !singlematch( ms, s, p, ep ) )
             {
-                if( *ep == '*' || *ep == '?' || *ep == '-' )  /* accept empty? */
+                if( *ep == '*' || *ep == '?' || *ep == '-' )  // Accept empty?
                 {
                     p = ep + 1;
-                    goto init;  /* return match( ms, s, ep + 1 ); */
+                    goto init;  // Return match( ms, s, ep + 1 )
                 }
-                /* '+' or no suffix */
+                // '+' or no suffix
                 return nullptr;
             }
-            else  /* matched once */
+            else  // Matched once
             {
-                switch( *ep )  /* handle optional suffix */
+                switch( *ep )  // Handle optional suffix
                 {
-                case '?':  /* optional */
+                case '?':  // Optional
                     if( auto res = match( ms, s + 1, ep + 1 ) )
                     {
                         return res;
                     }
                     p = ep + 1;
-                    goto init;  /* else return match( ms, s, ep + 1 ); */
+                    goto init;  // Else return match( ms, s, ep + 1 )
 
-                case '+':   /* 1 or more repetitions */
-                    ++s;    /* 1 match already done */
-                    /* FALLTHROUGH */
-                case '*':   /* 0 or more repetitions */
+                case '+':   // 1 or more repetitions
+                    ++s;    // 1 match already done
+                    //FALLTHROUGH
+                case '*':   // 0 or more repetitions
                     return max_expand( ms, s, p, ep );
 
-                case '-':   /* 0 or more repetitions (minimum) */
+                case '-':   // 0 or more repetitions (minimum)
                     return min_expand( ms, s, p, ep );
 
-                default:    /* no suffix */
+                default:    // No suffix
                     p = ep;
                     ++s;
-                    goto init;  /* return match( ms, s + 1, ep ); */
+                    goto init;  // Return match( ms, s + 1, ep )
                 }
             }
             break;
@@ -782,7 +780,10 @@ extern template struct pattern_context< char32_t >;
 /**
  * \brief A lex context is an input string combined with a pattern.
  *
- * You can iterate over all matches in a string calling the pg::lex::begin and pg::lex::end functions with a context object.
+ * You can get a pg::lex::gmatch_iterator using the pg::lex::begin and pg::lex::end functions and
+ * iterate with it over all matches in a lex context.
+ *
+ * A lex context also works with ranged based for-loops.
  *
  * \note A lex context keeps a reference to the input string and pattern.
  *
@@ -791,6 +792,7 @@ extern template struct pattern_context< char32_t >;
  *
  * \see pg::lex::begin
  * \see pg::lex::end
+ * \see pg::lex::gmatch_iterator
  */
 template< typename StrCharT, typename PatCharT >
 struct context
@@ -860,10 +862,12 @@ auto match( StrT&& str, PatT&& pat )
 }
 
 /**
- * \brief An iterator for pg::lex::context objects.
+ * \brief An iterator for matches in pg::lex::context objects.
  *
  * The constructor does not perform the first match so the match result is not yet valid.
  * First you must increase the iterator before dereferencing it to search for the first match result.
+ *
+ * The iterator behaves as a forward iterator and can only advance with the `++` operator.
  *
  * \see pg::lex::context
  * \see pg::lex::begin
@@ -949,7 +953,7 @@ private:
 };
 
 /**
- * \brief Returns a pg::lex::gmatch_iterator of a lex context object.
+ * \brief Returns a pg::lex::gmatch_iterator from a lex context object.
  *
  * When the context contains matches, the iterator has initial the result of the first match.
  * The iterator is equal to the end iterator when the context has no matches.
@@ -978,14 +982,14 @@ auto end( const context< StrCharT, PatCharT > & c ) noexcept
 }
 
 /**
- * \brief Substitutes a replacement for a match found in the input string.
+ * \brief Substitutes a replacement pattern for a match found in the input string.
  *
  * \param str   The input string
  * \param pat   The pattern used to find matches in the input string
  * \param repl  The replacement pattern that substitutes the match.
  * \param count The maximum number of substitutes; negative for unlimited an unlimited count.
  *
- * \return returns a std::string based on the character type of the input string
+ * \return Returns a std::string based on the character type of the input string
  */
 template< typename StrT, typename PatT, typename ReplT,
           typename std::enable_if< detail::string_traits< ReplT >::is_string, int >::type = 0 >
@@ -1010,7 +1014,7 @@ auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
     {
         if( c.p.anchor )
         {
-            count = 0;  // break at first iteration
+            count = 0;  // Break at first iteration
         }
 
         auto e = detail::match( ms, s, c.p.begin );
@@ -1094,7 +1098,7 @@ auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
  * \param repl  A function that accepts a match result and returns the replacement.
  * \param count The maximum number of substitutes; negative for unlimited an unlimited count.
  *
- * \return returns a std::string based on the character type of the input string
+ * \return Returns a std::string based on the character type of the input string
  */
 template< typename StrT, typename PatT, typename Function,
           typename std::enable_if< !detail::string_traits< Function >::is_string, int >::type = 0 >
@@ -1115,7 +1119,7 @@ auto gsub( StrT&& str, PatT&& pat, Function&& func, int count = -1 )
     {
         if( c.p.anchor )
         {
-            count = 0;  // break at first iteration
+            count = 0;  // Break at first iteration
         }
 
         auto e = detail::match( ms, s, c.p.begin );
