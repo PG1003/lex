@@ -821,46 +821,6 @@ context( StrT &&, PatT && ) noexcept ->
 context< typename detail::string_traits< StrT >::char_type,
          typename detail::string_traits< PatT >::char_type >;
 
-
-/**
- * \brief Searches for the first match of a pattern in an input string.
- *
- * \return Returns a match result based on the character type of the input string.
- */
-template< typename StrT, typename PatT >
-auto match( StrT&& str, PatT&& pat )
-{
-    using str_char_type = typename detail::string_traits< StrT >::char_type;
-
-    context                             c = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
-    basic_match_result< str_char_type > mr;
-    detail::match_state                 ms = { c.s.begin, c.s.end, c.p.end, mr };
-
-    for( auto s = c.s.begin ; s <= c.s.end ; ++s )
-    {
-        if( auto e = detail::match( ms, s, c.p.begin ) )
-        {
-            ms.check_captures();
-            ms.pos = { static_cast< long >( s - c.s.begin ), static_cast< long >( e - c.s.begin ) };
-            if( ms.level == 0 )
-            {
-                ms.captures[ ms.level ] = { s, static_cast< long >( e - s ) };
-                ++ms.level;
-            }
-            return mr;
-        }
-
-        if( c.p.anchor )
-        {
-            break;
-        }
-
-        ms.reprepstate();
-    }
-
-    return mr;
-}
-
 /**
  * \brief An iterator for matches in pg::lex::context objects.
  *
@@ -875,9 +835,16 @@ auto match( StrT&& str, PatT&& pat )
 template< typename StrCharT, typename PatCharT >
 struct gmatch_iterator
 {
-    gmatch_iterator( const context< StrCharT, PatCharT >& ctx, const StrCharT * start ) noexcept
+    enum match_mode
+    {
+        global,
+        exact
+    };
+
+    gmatch_iterator( const context< StrCharT, PatCharT >& ctx, const StrCharT * start, match_mode mode = global ) noexcept
         : c( ctx )
         , pos( start )
+        , mm( mode )
     {}
 
     /**
@@ -913,6 +880,11 @@ struct gmatch_iterator
             last_match = e;
 
             ms.reprepstate();
+
+            if( mm == exact && c.p.anchor )
+            {
+                break;
+            }
         }
 
         return *this;
@@ -950,6 +922,7 @@ private:
     const StrCharT *                    pos        = nullptr;
     const StrCharT *                    last_match = nullptr;
     basic_match_result< StrCharT >      mr;
+    const match_mode                    mm         = match_mode::global;
 };
 
 /**
@@ -979,6 +952,23 @@ template< typename StrCharT, typename PatCharT >
 auto end( const context< StrCharT, PatCharT > & c ) noexcept
 {
     return gmatch_iterator( c, c.s.end + 1 );
+}
+
+/**
+ * \brief Searches for the first match of a pattern in an input string.
+ *
+ * \return Returns a match result based on the character type of the input string.
+ */
+template< typename StrT, typename PatT >
+auto match( StrT&& str, PatT&& pat )
+{
+    using str_char_type = typename detail::string_traits< StrT >::char_type;
+    using pat_char_type = typename detail::string_traits< PatT >::char_type;
+    using iterator_type = gmatch_iterator< str_char_type, pat_char_type >;
+
+    const context c  = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
+    auto          it = iterator_type( c, c.s.begin, iterator_type::exact );
+    return *( ++it );
 }
 
 /**
