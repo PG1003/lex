@@ -837,8 +837,8 @@ struct gmatch_iterator
 {
     enum match_mode
     {
-        global,
-        exact
+        global, /**< Ignore '^' at the start of pattern. */
+        exact   /**< Match pattern exactly. */
     };
 
     gmatch_iterator( const context< StrCharT, PatCharT >& ctx, const StrCharT * start, match_mode mode = global ) noexcept
@@ -988,94 +988,77 @@ auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
     static_assert( detail::string_traits< ReplT >::is_string, "Replacement pattern is not one of the supported string-like types!" );
 
     using str_char_type  = typename detail::string_traits< StrT >::char_type;
+    using pat_char_type  = typename detail::string_traits< PatT >::char_type;
     using repl_char_type = typename detail::string_traits< ReplT >::char_type;
+    using iterator_type  = gmatch_iterator< str_char_type, pat_char_type >;
 
-    const detail::string_context< repl_char_type > r          = { repl };
-    const context                                  c          = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
-    basic_match_result< str_char_type >            mr;
-    detail::match_state                            ms         = { c.s.begin, c.s.end, c.p.end, mr };
-    const str_char_type *                          last_match = nullptr;
+    const detail::string_context< repl_char_type > r            = { std::forward< ReplT >( repl ) };
+    const context                                  c            = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
+    auto                                           match_it     = iterator_type( c, c.s.begin, iterator_type::exact );
+    const auto                                     match_end_it = end( c );
 
     std::basic_string< str_char_type > result;
     result.reserve( c.s.end - c.s.begin );
 
-    auto s = c.s.begin;
-    while( s <= c.s.end && count != 0 )
+    const str_char_type * cp_begin = c.s.begin;
+    while( ++match_it != match_end_it && count != 0 )
     {
-        if( c.p.anchor )
+        --count;
+
+        const auto & mr              = *match_it;
+        const str_char_type * cp_end = c.s.begin + mr.position().first;
+
+        result.append( cp_begin, cp_end );
+
+        auto r_begin = r.begin;
+        for( auto find = std::find( r_begin, r.end, '%' ) ;
+            find != r.end ;
+            r_begin = find + 1, find = std::find( r_begin, r.end, '%' ) )
         {
-            count = 0;  // Break at first iteration
-        }
+            result.append( r_begin, find );     // Copy pattern before '%'
+            ++find;                             // skip ESC
 
-        auto e = detail::match( ms, s, c.p.begin );
-        if( !e || e == last_match )
-        {
-            ++s;
-        }
-        else
-        {
-            --count;
-
-            result.append( last_match ? last_match : c.s.begin, s );
-
-            ms.check_captures();
-
-            auto r_begin = r.begin;
-            for( auto find = std::find( r_begin, r.end, '%' ) ;
-                find != r.end ;
-                r_begin = find + 1, find = std::find( r_begin, r.end, '%' ) )
+            const str_char_type cap_char = *find;
+            if( cap_char == '%' )                // %%
             {
-                result.append( r_begin, find );     // Copy pattern before '%'
-                ++find;                             // skip ESC
-
-                const str_char_type cap_char = *find;
-                if( cap_char == '%' )                // %%
+                result.append( 1u, cap_char );
+            }
+            else if( cap_char == '0' )           // %0
+            {
+                const str_char_type * const match_begin = c.s.begin + mr.position().first;
+                const str_char_type * const match_end   = c.s.begin + mr.position().second;
+                result.append( match_begin ,match_end );
+            }
+            else if( std::isdigit( cap_char ) )  // %n
+            {
+                const auto cap_index = cap_char - '1';
+                if( static_cast< size_t >( cap_index ) >= mr.size() )
                 {
-                    result.append( 1u, cap_char );
+                    throw lex_error( capture_invalid_index );
                 }
-                else if( cap_char == '0' )           // %0
+                const auto cap = mr.at( cap_index );
+                if( cap.size() == 0 )   // Position capture
                 {
-                    result.append( s, e );
-                }
-                else if( std::isdigit( cap_char ) )  // %n
-                {
-                    if( ms.level == 0 )
-                    {
-                        ms.captures[ ms.level ] = { s, static_cast< long >( e - s ) };
-                        ++ms.level;
-                    }
-                    const auto cap_index = cap_char - '1';
-                    if( cap_index >= ms.level )
-                    {
-                        throw lex_error( capture_invalid_index );
-                    }
-                    const auto& cap = ms.captures[ cap_index ];
-                    if( cap.len == detail::cap_state::position  )
-                    {
-                        const ptrdiff_t pos = 1 + cap.init - c.s.begin;
-                        detail::append_number( result, pos );
-                    }
-                    else
-                    {
-                        assert( cap.len != detail::cap_state::unfinished );
-                        result.append( cap.init, cap.len );
-                    }
+                    const ptrdiff_t pos = 1 + cap.data() - c.s.begin;
+                    detail::append_number( result, pos );
                 }
                 else
                 {
-                    throw lex_error( percent_invalid_use_in_replacement );
+                    result.append( cap.data(), cap.size() );
                 }
             }
-
-            result.append( r_begin, r.end );
-
-            last_match = e;
-            s          = e;
+            else
+            {
+                throw lex_error( percent_invalid_use_in_replacement );
+            }
         }
-        ms.reprepstate();
+
+        result.append( r_begin, r.end );
+
+        cp_begin = c.s.begin + mr.position().second;
     }
 
-    result.append( last_match ? last_match : c.s.begin, c.s.end );
+    result.append( cp_begin, c.s.end );
 
     return result;
 }
@@ -1094,54 +1077,32 @@ template< typename StrT, typename PatT, typename Function,
           typename std::enable_if< !detail::string_traits< Function >::is_string, int >::type = 0 >
 auto gsub( StrT&& str, PatT&& pat, Function&& func, int count = -1 )
 {
-    using str_char_type  = typename detail::string_traits< StrT >::char_type;
+    using str_char_type = typename detail::string_traits< StrT >::char_type;
+    using pat_char_type = typename detail::string_traits< PatT >::char_type;
+    using iterator_type = gmatch_iterator< str_char_type, pat_char_type >;
 
-    const context                       c          = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
-    basic_match_result< str_char_type > mr;
-    detail::match_state                 ms         = { c.s.begin, c.s.end, c.p.end, mr };
-    const str_char_type *               last_match = nullptr;
+    const context c            = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
+    auto          match_it     = iterator_type( c, c.s.begin, iterator_type::exact );
+    const auto    match_end_it = end( c );
 
     std::basic_string< str_char_type > result;
     result.reserve( c.s.end - c.s.begin );
 
-    auto s = c.s.begin;
-    while( s <= c.s.end && count != 0 )
+    const str_char_type * cp_begin = c.s.begin;
+    while( ++match_it != match_end_it && count != 0 )
     {
-        if( c.p.anchor )
-        {
-            count = 0;  // Break at first iteration
-        }
+        --count;
 
-        auto e = detail::match( ms, s, c.p.begin );
-        if( !e || e == last_match )
-        {
-            ++s;
-        }
-        else
-        {
-            --count;
+        const auto & mr              = *match_it;
+        const str_char_type * cp_end = c.s.begin + mr.position().first;
 
-            result.append( last_match ? last_match : c.s.begin, s );
+        result.append( cp_begin, cp_end );
+        result.append( func( mr ) );
 
-            ms.check_captures();
-            ms.pos = { static_cast< long >( s - c.s.begin ), static_cast< long >( e - c.s.begin ) };
-            if( ms.level == 0 )
-            {
-                ms.captures[ ms.level ] = { s, static_cast< long >( e - s ) };
-                ++ms.level;
-            }
-
-            auto repl = func( mr );
-            result.append( repl );
-
-            last_match = e;
-            s          = e;
-        }
-
-        ms.reprepstate();
+        cp_begin = c.s.begin + mr.position().second;
     }
 
-    result.append( last_match ? last_match : c.s.begin, c.s.end );
+    result.append( cp_begin, c.s.end );
 
     return result;
 }
