@@ -883,6 +883,7 @@ struct gmatch_iterator
 
             if( mm == exact && c.p.anchor )
             {
+                pos = c.s.end + 1; // Seek to the end iterator position.
                 break;
             }
         }

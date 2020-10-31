@@ -261,6 +261,40 @@ static void gmatch()
           }
           assert_true( result == "-a-b-c-d-" );
     }
+
+    {
+        using iterator = lex::gmatch_iterator< char, char >;
+
+        auto str  = "abcde";
+
+        auto c_1        = lex::context( str, "^ab" );
+        auto it_1_begin = iterator( c_1, c_1.s.begin, iterator::global );
+        ++it_1_begin;
+        assert_true( *it_1_begin );
+        assert_true( it_1_begin->position().first == 0 );
+        auto it_1_end   = lex::end( c_1 );
+        assert_true( it_1_begin != it_1_end );
+
+        auto c_2        = lex::context( str, "^ab" );
+        auto it_2_begin = iterator( c_2, c_2.s.begin, iterator::exact );
+        ++it_2_begin;
+        assert_true( *it_2_begin );
+        assert_true( it_2_begin->position().first == 0 );
+        auto it_2_end   = lex::end( c_2 );
+        assert_true( it_2_begin != it_2_end );
+
+        auto c_3        = lex::context( str, "bc" );
+        auto it_3_begin = iterator( c_3, c_3.s.begin, iterator::global );
+        ++it_3_begin;
+        auto it_3_end   = lex::end( c_3 );
+        assert_true( it_3_begin != it_3_end );
+
+        auto c_4        = lex::context( str, "^bc" );
+        auto it_4_begin = iterator( c_4, c_4.s.begin, iterator::exact );
+        ++it_4_begin;
+        auto it_4_end   = lex::end( c_4 );
+        assert_true( it_4_begin == it_4_end );
+    }
 }
 
 static void gsub()
