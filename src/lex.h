@@ -95,6 +95,7 @@ private:
 };
 
 }
+
 template< typename >
 struct basic_match_result;
 
@@ -339,7 +340,7 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
     using unsigned_c_t = typename std::make_unsigned< StrCharT >::type;
     using unsigned_p_t = typename std::make_unsigned< PatCharT >::type;
 
-    const auto c_ = static_cast< unsigned_c_t >( c );
+    const auto uc = static_cast< unsigned_c_t >( c );
 
     bool ret = true;
     if( *( p + 1 ) == '^' )
@@ -352,7 +353,7 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
         if( *p == '%' )
         {
             p++;
-            if( match_class( c_, *p ) )
+            if( match_class( uc, *p ) )
             {
                 return ret;
             }
@@ -362,12 +363,12 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
             p += 2;
             const auto min = static_cast< unsigned_p_t >( *( p - 2 ) );
             const auto max = static_cast< unsigned_p_t >( *p );
-            if( min <= c_ && c_ <= max )
+            if( min <= uc && uc <= max )
             {
                 return ret;
             }
         }
-        else if( static_cast<unsigned_p_t>( *p ) == c_ )
+        else if( static_cast<unsigned_p_t>( *p ) == uc )
         {
             return ret;
         }
@@ -980,7 +981,7 @@ auto match( StrT&& str, PatT&& pat )
  * \param repl  The replacement pattern that substitutes the match.
  * \param count The maximum number of substitutes; negative for unlimited an unlimited count.
  *
- * \return Returns a std::string based on the character type of the input string
+ * \return Returns a std::string based on the character type of the input string.
  */
 template< typename StrT, typename PatT, typename ReplT,
           typename std::enable_if< detail::string_traits< ReplT >::is_string, int >::type = 0 >
@@ -1072,7 +1073,7 @@ auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
  * \param repl  A function that accepts a match result and returns the replacement.
  * \param count The maximum number of substitutes; negative for unlimited an unlimited count.
  *
- * \return Returns a std::string based on the character type of the input string
+ * \return Returns a std::string based on the character type of the input string.
  */
 template< typename StrT, typename PatT, typename Function,
           typename std::enable_if< !detail::string_traits< Function >::is_string, int >::type = 0 >
