@@ -72,7 +72,7 @@ template< typename T >                                      struct string_traits
 template< typename, typename, typename >
 struct match_state;
 
-enum cap_state : long
+enum cap_state : int
 {
     unfinished = -1,
     position   = -2
@@ -82,7 +82,7 @@ template< typename CharT >
 struct capture
 {
     const CharT * init = nullptr;
-    long          len  = cap_state::unfinished;
+    int           len  = cap_state::unfinished;
 };
 
 struct matchdepth_sentinel
@@ -99,7 +99,7 @@ private:
 template< typename >
 struct basic_match_result;
 
-enum error_type
+enum error_type : int
 {
     pattern_too_complex,
     pattern_ends_with_percent,
@@ -138,7 +138,7 @@ private:
     template< typename, typename, typename >
     friend struct detail::match_state;
 
-    std::pair< long, long >  pos   = { -1, -1 };  // The indices where the match starts and ends
+    std::pair< int, int >    pos   = { -1, -1 };  // The indices where the match starts and ends
     int                      level = 0;           // Total number of captures (finished or unfinished)
     detail::capture< CharT > captures[ MAXCAPTURES ];
 
@@ -176,14 +176,14 @@ public:
             : cap( c )
         {
             assert( cap );
-            sv = { cap->init, static_cast< size_t>( std::max( cap->len, 0l ) ) };
+            sv = { cap->init, static_cast< size_t>( std::max( cap->len, 0 ) ) };
         }
 
         void move( int i ) noexcept
         {
             assert( cap );
             cap += i;
-            sv = { cap->init, static_cast< size_t>( std::max( cap->len, 0l ) ) };
+            sv = { cap->init, static_cast< size_t>( std::max( cap->len, 0 ) ) };
         }
     };
 
@@ -210,7 +210,7 @@ public:
     /**
      * \brief Returns a std::string_view of the requested capture.
      *
-     * This function thows a 'capture_out_of_range' when match result doesn't have a capture at the requested index.
+     * This function throws a 'capture_out_of_range' when match result doesn't have a capture at the requested index.
      */
     std::basic_string_view< CharT > at( size_t i ) const
     {
@@ -221,7 +221,7 @@ public:
         auto& cap = captures[ i ];
 
         assert( cap.len != detail::cap_state::unfinished );
-        return { cap.init, static_cast< size_t >( std::max( cap.len, 0l ) ) };
+        return { cap.init, static_cast< size_t >( std::max( cap.len, 0 ) ) };
     }
 
     /**
@@ -229,7 +229,7 @@ public:
      *
      * First is the start index of the match and second one past the last character of the match.
      */
-    const std::pair< long, long > & position() const noexcept { return pos; }
+    const std::pair< int, int > & position() const noexcept { return pos; }
 
     /**
      * \brief Returns the length of the match.
@@ -287,7 +287,7 @@ struct match_state
 
     int &                         level;            // Total number of captures (finished or unfinished)
     detail::capture< StrCharT > * captures;
-    std::pair< long, long > &     pos;
+    std::pair< int, int > &       pos;
 };
 
 
@@ -353,7 +353,7 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
         if( *p == '%' )
         {
             p++;
-            if( match_class( uc, *p ) )
+            if( match_class( c, *p ) )
             {
                 return ret;
             }
@@ -368,7 +368,7 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
                 return ret;
             }
         }
-        else if( static_cast<unsigned_p_t>( *p ) == uc )
+        else if( static_cast< unsigned_p_t >( *p ) == uc )
         {
             return ret;
         }
@@ -527,7 +527,7 @@ auto end_capture( MS &ms, const StrCharT * s, const PatCharT * p )
         auto& cap = ms.captures[ i ];
         if( cap.len == cap_state::unfinished )
         {
-            cap.len = static_cast< long >( s - cap.init );
+            cap.len = static_cast< int >( s - cap.init );
 
             auto res = match( ms, s, p );
             if( !res )
@@ -616,8 +616,8 @@ const StrCharT * match( MS &ms, const StrCharT * s, const PatCharT * p )
                 }
                 else
                 {
-                    const PatCharT * ep = classend( ms, p );  // Points to what is next
-                    auto previous   = ( s == ms.s_begin ) ? '\0' : *( s - 1 );
+                    const PatCharT * ep       = classend( ms, p );  // Points to what is next
+                    auto             previous = ( s == ms.s_begin ) ? '\0' : *( s - 1 );
                     if( !matchbracketclass( previous, p, ep - 1 ) &&
                          matchbracketclass( *s, p, ep - 1 ) )
                     {
@@ -667,7 +667,7 @@ const StrCharT * match( MS &ms, const StrCharT * s, const PatCharT * p )
 
                 case '+':   // 1 or more repetitions
                     ++s;    // 1 match already done
-                    //FALLTHROUGH
+                    // Fallthrough
                 case '*':   // 0 or more repetitions
                     return max_expand( ms, s, p, ep );
 
@@ -698,7 +698,7 @@ void append_number( std::basic_string< CharT >& str, ptrdiff_t number )
     {
         append_number( str, number / 10 );
     }
-    str.append( 1u, '0' + ( number % 10 ) );
+    str.append( 1, '0' + ( number % 10 ) );
 }
 
 template< typename CharT >
@@ -836,7 +836,7 @@ context< typename detail::string_traits< StrT >::char_type,
 template< typename StrCharT, typename PatCharT >
 struct gmatch_iterator
 {
-    enum match_mode
+    enum match_mode : int
     {
         global, /**< Ignore '^' at the start of pattern. */
         exact   /**< Match pattern exactly. */
@@ -867,10 +867,10 @@ struct gmatch_iterator
             else
             {
                 ms.check_captures();
-                ms.pos = { static_cast< long >( pos - c.s.begin ), static_cast< long >( e - c.s.begin ) };
+                ms.pos = { static_cast< int >( pos - c.s.begin ), static_cast< int >( e - c.s.begin ) };
                 if( ms.level == 0 )
                 {
-                    ms.captures[ ms.level ] = { pos, static_cast< long >( e - pos ) };
+                    ms.captures[ ms.level ] = { pos, static_cast< int >( e - pos ) };
                     ++ms.level;
                 }
                 last_match = e;
@@ -919,7 +919,6 @@ struct gmatch_iterator
     }
 
 private:
-
     const context< StrCharT, PatCharT > c;
     const StrCharT *                    pos        = nullptr;
     const StrCharT *                    last_match = nullptr;
@@ -976,8 +975,8 @@ auto match( StrT&& str, PatT&& pat )
 /**
  * \brief Substitutes a replacement pattern for a match found in the input string.
  *
- * \param str   The input string
- * \param pat   The pattern used to find matches in the input string
+ * \param str   The input string.
+ * \param pat   The pattern used to find matches in the input string.
  * \param repl  The replacement pattern that substitutes the match.
  * \param count The maximum number of substitutes; negative for unlimited an unlimited count.
  *
@@ -1068,8 +1067,8 @@ auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
 /**
  * \brief Substitutes a replacement for a match found in the input string.
  *
- * \param str   The input string
- * \param pat   The pattern used to find matches in the input string
+ * \param str   The input string.
+ * \param pat   The pattern used to find matches in the input string.
  * \param repl  A function that accepts a match result and returns the replacement.
  * \param count The maximum number of substitutes; negative for unlimited an unlimited count.
  *
