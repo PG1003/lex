@@ -94,6 +94,12 @@ struct capture
         return len == cap_state::unfinished;
     }
 
+    operator std::basic_string_view< CharT >() const
+    {
+        assert( !is_unfinished() );
+        return { init, static_cast< size_t>( std::max( len, 0 ) ) };
+    }
+
 private:
     enum cap_state : int
     {
@@ -255,7 +261,7 @@ public:
             : cap( c )
         {
             assert( cap );
-            sv = { cap->init, static_cast< size_t>( std::max( cap->len, 0 ) ) };
+            sv = *cap;
         }
 
         iterator( const detail::captures< CharT > & c ) noexcept
@@ -266,7 +272,7 @@ public:
         {
             assert( cap );
             cap += i;
-            sv = { cap->init, static_cast< size_t>( std::max( cap->len, 0 ) ) };
+            sv = *cap;
         }
     };
 
@@ -301,10 +307,8 @@ public:
         {
             throw lex_error( capture_out_of_range );
         }
-        auto& cap = captures[ i ];
 
-        assert( !cap.is_unfinished() );
-        return { cap.init, static_cast< size_t >( std::max( cap.len, 0 ) ) };
+        return captures[ i ];
     }
 
     /**
