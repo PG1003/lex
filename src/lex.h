@@ -73,17 +73,33 @@ template< typename T >                                      struct string_traits
 template< typename, typename, typename >
 struct match_state;
 
-enum cap_state : int
-{
-    unfinished = -1,
-    position   = -2
-};
-
 template< typename CharT >
 struct capture
 {
     const CharT * init = nullptr;
     int           len  = cap_state::unfinished;
+
+    void mark_unfinished()
+    {
+        len = cap_state::unfinished;
+    }
+
+    void mark_position()
+    {
+        len = cap_state::position;
+    }
+
+    bool is_unfinished() const
+    {
+        return len == cap_state::unfinished;
+    }
+
+private:
+    enum cap_state : int
+    {
+        unfinished = -1,
+        position   = -2
+    };
 };
 
 template< typename CharT >
@@ -287,7 +303,7 @@ public:
         }
         auto& cap = captures[ i ];
 
-        assert( cap.len != detail::cap_state::unfinished );
+        assert( !cap.is_unfinished() );
         return { cap.init, static_cast< size_t >( std::max( cap.len, 0 ) ) };
     }
 
@@ -341,7 +357,7 @@ struct match_state
 
     void check_captures() const
     {
-        if( std::any_of( captures.data(), captures.data() + level, []( const auto &cap ){ return cap.len == detail::cap_state::unfinished; } ) )
+        if( std::any_of( captures.data(), captures.data() + level, []( const auto & cap ){ return cap.is_unfinished(); } ) )
         {
             throw lex_error( capture_not_finished );
         }
@@ -564,12 +580,12 @@ auto start_capture( MS &ms, const StrCharT * s, const PatCharT * p )
 
     if( *p == ')' )
     {
-        ms.captures[ ms.level ].len = cap_state::position;
+        ms.captures[ ms.level ].mark_position();
         ++p;
     }
     else
     {
-        ms.captures[ ms.level ].len = cap_state::unfinished;
+        ms.captures[ ms.level ].mark_unfinished();
     }
 
     ms.level++;
@@ -579,7 +595,7 @@ auto start_capture( MS &ms, const StrCharT * s, const PatCharT * p )
     {
         // Undo capture when the match has failed
         --ms.level;
-        ms.captures[ ms.level ].len = cap_state::unfinished;
+        ms.captures[ ms.level ].mark_unfinished();
     }
     return res;
 }
@@ -592,7 +608,7 @@ auto end_capture( MS &ms, const StrCharT * s, const PatCharT * p )
     for( --i ; i >= 0 ; --i )
     {
         auto& cap = ms.captures[ i ];
-        if( cap.len == cap_state::unfinished )
+        if( cap.is_unfinished() )
         {
             cap.len = static_cast< int >( s - cap.init );
 
@@ -600,7 +616,7 @@ auto end_capture( MS &ms, const StrCharT * s, const PatCharT * p )
             if( !res )
             {
                 // Undo capture when the match has failed
-                cap.len = cap_state::unfinished ;
+                cap.mark_unfinished();
             }
             return res;
         }
@@ -616,7 +632,7 @@ const StrCharT * match_capture( MS &ms, const StrCharT * s, PatCharT c )
     const int i = c - '1';
 
     if( i < 0 || i >= ms.level ||
-        ms.captures[ i ].len == cap_state::unfinished  )
+        ms.captures[ i ].is_unfinished() )
     {
         throw lex_error( capture_invalid_index );
     }
