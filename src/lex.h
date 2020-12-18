@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <utility>
 #include <type_traits>
+#include <memory>
 
 
 // Maximum recursion depth for 'match'
@@ -85,6 +86,68 @@ struct capture
     int           len  = cap_state::unfinished;
 };
 
+template< typename CharT >
+struct captures
+{
+    captures() = default;
+
+    captures( const captures & other )
+    {
+        operator=( other );
+    }
+
+    captures( captures && other )
+        : local( other.local )
+        , alloc( std::move( other.alloc ) )
+    {}
+
+    captures & operator=( const captures & other )
+    {
+        if( other.alloc )
+        {
+            alloc = std::unique_ptr< capture< CharT >[] >( new capture< CharT >[ MAXCAPTURES ] );
+            std::copy( other.alloc.get(), other.alloc.get() + MAXCAPTURES, alloc.get() );
+        }
+        else
+        {
+            std::copy( other.local, other.local + max_local, local );
+        }
+
+        return *this;
+    }
+
+    capture< CharT > & operator[]( std::size_t idx )
+    {
+        if( alloc )
+        {
+            return alloc[ idx ];
+        }
+        else if( idx >= max_local )
+        {
+            alloc = std::unique_ptr< capture< CharT >[] >( new capture< CharT >[ MAXCAPTURES ] );
+            std::copy( local, local + max_local, alloc.get() );
+            return alloc[ idx ];
+        }
+
+        return local[ idx ];
+    }
+
+    const capture< CharT > & operator[]( std::size_t idx ) const
+    {
+        return alloc ? alloc[ idx ] : local[ idx ];
+    }
+
+    const capture< CharT > * data() const
+    {
+        return alloc ? alloc.get() : local;
+    }
+
+private:
+    static constexpr int                  max_local = 2;
+    capture< CharT >                      local[ max_local ];
+    std::unique_ptr< capture< CharT >[] > alloc;
+};
+
 struct matchdepth_sentinel
 {
     matchdepth_sentinel( int &counter );
@@ -138,9 +201,9 @@ private:
     template< typename, typename, typename >
     friend struct detail::match_state;
 
-    std::pair< int, int >    pos   = { -1, -1 };  // The indices where the match starts and ends
-    int                      level = 0;           // Total number of captures (finished or unfinished)
-    detail::capture< CharT > captures[ MAXCAPTURES ];
+    std::pair< int, int >     pos   = { -1, -1 };  // The indices where the match starts and ends
+    int                       level = 0;           // Total number of captures (finished or unfinished)
+    detail::captures< CharT > captures;
 
 public:
 
@@ -179,6 +242,10 @@ public:
             sv = { cap->init, static_cast< size_t>( std::max( cap->len, 0 ) ) };
         }
 
+        iterator( const detail::captures< CharT > & c ) noexcept
+            : iterator( c.data() )
+        {}
+
         void move( int i ) noexcept
         {
             assert( cap );
@@ -195,7 +262,7 @@ public:
     /**
      * \brief Returns an iterator to the end of the capture list.
      */
-    iterator end() const noexcept { return { captures + size() }; }
+    iterator end() const noexcept { return { captures.data() + size() }; }
 
     /**
      * \brief Returns the number of captures.
@@ -274,7 +341,7 @@ struct match_state
 
     void check_captures() const
     {
-        if( std::any_of( captures, captures + level, []( const auto &cap ){ return cap.len == detail::cap_state::unfinished ; } ) )
+        if( std::any_of( captures.data(), captures.data() + level, []( const auto &cap ){ return cap.len == detail::cap_state::unfinished; } ) )
         {
             throw lex_error( capture_not_finished );
         }
@@ -285,9 +352,9 @@ struct match_state
     const PatCharT * const p_end;
     int                    matchdepth = MAXCCALLS;  // Control for recursive depth (to avoid stack overflow)
 
-    int &                         level;            // Total number of captures (finished or unfinished)
-    detail::capture< StrCharT > * captures;
-    std::pair< int, int > &       pos;
+    int &                          level;           // Total number of captures (finished or unfinished)
+    detail::captures< StrCharT > & captures;
+    std::pair< int, int > &        pos;
 };
 
 
@@ -843,9 +910,9 @@ struct gmatch_iterator
     };
 
     gmatch_iterator( const context< StrCharT, PatCharT >& ctx, const StrCharT * start, match_mode mode = global ) noexcept
-        : c( ctx )
+        : mm( mode )
+        , c( ctx )
         , pos( start )
-        , mm( mode )
     {}
 
     /**
@@ -919,11 +986,11 @@ struct gmatch_iterator
     }
 
 private:
+    const match_mode                    mm         = match_mode::global;
     const context< StrCharT, PatCharT > c;
     const StrCharT *                    pos        = nullptr;
     const StrCharT *                    last_match = nullptr;
     basic_match_result< StrCharT >      mr;
-    const match_mode                    mm         = match_mode::global;
 };
 
 /**
