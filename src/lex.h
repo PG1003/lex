@@ -618,7 +618,7 @@ auto end_capture( MS &ms, const StrCharT * s, const PatCharT * p )
         auto& cap = ms.captures[ i ];
         if( cap.is_unfinished() )
         {
-            cap.len( s - cap.init() );
+            cap.len( static_cast< int >( s - cap.init() ) );
 
             auto res = match( ms, s, p );
             if( !res )
