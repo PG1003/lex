@@ -115,19 +115,19 @@ private:
 template< typename CharT >
 struct captures
 {
-    captures() = default;
+    captures() noexcept = default;
 
-    captures( const captures & other )
+    captures( const captures & other ) noexcept
     {
         operator=( other );
     }
 
-    captures( captures && other )
+    captures( captures && other ) noexcept
         : local( other.local )
         , alloc( std::move( other.alloc ) )
     {}
 
-    captures & operator=( const captures & other )
+    captures & operator=( const captures & other ) noexcept
     {
         if( other.alloc )
         {
@@ -142,7 +142,7 @@ struct captures
         return *this;
     }
 
-    capture< CharT > & operator[]( std::size_t idx )
+    capture< CharT > & operator[]( std::size_t idx ) noexcept
     {
         if( alloc )
         {
@@ -158,12 +158,12 @@ struct captures
         return local[ idx ];
     }
 
-    const capture< CharT > & operator[]( std::size_t idx ) const
+    const capture< CharT > & operator[]( std::size_t idx ) const noexcept
     {
         return alloc ? alloc[ idx ] : local[ idx ];
     }
 
-    const capture< CharT > * data() const
+    const capture< CharT > * data() const noexcept
     {
         return alloc ? alloc.get() : local;
     }
