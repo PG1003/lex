@@ -76,28 +76,29 @@ struct match_state;
 template< typename CharT >
 struct capture
 {
-    const CharT * init = nullptr;
-    int           len  = cap_state::unfinished;
+    capture() noexcept
+        : capture( nullptr, cap_state::unfinished )
+    {}
 
-    void mark_unfinished()
-    {
-        len = cap_state::unfinished;
-    }
+    capture( const CharT * init, int len ) noexcept
+        : begin( init )
+        , length( len )
+    {}
 
-    void mark_position()
-    {
-        len = cap_state::position;
-    }
+    const CharT * init() const  noexcept           { assert( begin ); return begin; }
+    void          init( const CharT * i ) noexcept { assert( i ); begin = i; }
 
-    bool is_unfinished() const
-    {
-        return len == cap_state::unfinished;
-    }
+    int  len() const  noexcept { assert( length >= 0 ); return length; }
+    void len( int l ) noexcept { assert( l >= 0 ); length = l; }
 
-    operator std::basic_string_view< CharT >() const
+    void mark_unfinished() noexcept     { length = cap_state::unfinished; }
+    void mark_position() noexcept       { length = cap_state::position; }
+    bool is_unfinished() const noexcept { return length == cap_state::unfinished; }
+
+    operator std::basic_string_view< CharT >() const noexcept
     {
         assert( !is_unfinished() );
-        return { init, static_cast< size_t>( std::max( len, 0 ) ) };
+        return { begin, static_cast< size_t>( std::max( length, 0 ) ) };
     }
 
 private:
@@ -106,6 +107,9 @@ private:
         unfinished = -1,
         position   = -2
     };
+
+    const CharT * begin;
+    int           length;
 };
 
 template< typename CharT >
@@ -580,7 +584,7 @@ auto start_capture( MS &ms, const StrCharT * s, const PatCharT * p )
         throw lex_error( capture_too_many );
     }
 
-    ms.captures[ ms.level ].init = s;
+    ms.captures[ ms.level ].init( s );
 
     if( *p == ')' )
     {
@@ -614,7 +618,7 @@ auto end_capture( MS &ms, const StrCharT * s, const PatCharT * p )
         auto& cap = ms.captures[ i ];
         if( cap.is_unfinished() )
         {
-            cap.len = static_cast< int >( s - cap.init );
+            cap.len( s - cap.init() );
 
             auto res = match( ms, s, p );
             if( !res )
@@ -641,9 +645,9 @@ const StrCharT * match_capture( MS &ms, const StrCharT * s, PatCharT c )
         throw lex_error( capture_invalid_index );
     }
 
-    const size_t len = ms.captures[ i ].len;
-    if( static_cast< size_t >( ms.s_end - s ) >= len &&
-        memcmp( ms.captures[ i ].init, s, len * sizeof( c ) ) == 0 )
+    const int len = ms.captures[ i ].len();
+    if( ( ms.s_end - s ) >= len &&
+        memcmp( ms.captures[ i ].init(), s, len * sizeof( c ) ) == 0 )
     {
         return s + len;
     }
