@@ -76,15 +76,6 @@ struct match_state;
 template< typename CharT >
 struct capture
 {
-    capture() noexcept
-        : capture( nullptr, cap_state::unfinished )
-    {}
-
-    capture( const CharT * init, int len ) noexcept
-        : begin( init )
-        , length( len )
-    {}
-
     const CharT * init() const  noexcept           { assert( begin ); return begin; }
     void          init( const CharT * i ) noexcept { assert( i ); begin = i; }
 
@@ -98,7 +89,7 @@ struct capture
     operator std::basic_string_view< CharT >() const noexcept
     {
         assert( !is_unfinished() );
-        return { begin, static_cast< size_t>( std::max( length, 0 ) ) };
+        return { begin, static_cast< size_t >( std::max( length, 0 ) ) };
     }
 
 private:
@@ -108,8 +99,8 @@ private:
         position   = -2
     };
 
-    const CharT * begin;
-    int           length;
+    const CharT * begin  = nullptr;
+    int           length = cap_state::unfinished;
 };
 
 template< typename CharT >
@@ -961,7 +952,8 @@ struct gmatch_iterator
                 ms.pos = { static_cast< int >( pos - c.s.begin ), static_cast< int >( e - c.s.begin ) };
                 if( ms.level == 0 )
                 {
-                    ms.captures[ ms.level ] = { pos, static_cast< int >( e - pos ) };
+                    ms.captures[ ms.level ].init( pos );
+                    ms.captures[ ms.level ].len( static_cast< int >( e - pos ) );
                     ++ms.level;
                 }
                 last_match = e;
