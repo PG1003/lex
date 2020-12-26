@@ -128,7 +128,7 @@ std::string function( const pg::lex::match_result & mr )
     return "1003";
 }
 
-// 4 Do the substitution for the first 2 matches and print the result.
+// 3 Do the substitution for the first 2 matches and print the result.
 std::cout << pg::lex::gsub( str, "%s*%w+", function, 2 ) << '\n';
 ```
 Output:
@@ -182,7 +182,7 @@ Gmatch iterators return match results when you dereference them.
 The ```pg::lex::begin``` function creates an iterator and searches for the first match in the input string.
 The returned iterator is equal to the iterator returned by ```pg::lex::end``` when no match was found.
 
-A context also works with a ranged based for-loop.
+A context also works with a ranged based for-loop as shown in the [Iterate with a pattern](#iterate-with-a-pattern) example.
 
 ### Substitute
 
@@ -190,7 +190,7 @@ There are two overloaded functions that substitutes a matched substring with a r
 
 The ```pg::lex::gsub( str, pat, repl, count = -1 )``` overload replaces the match with a replacement pattern.
 A replacement pattern can have references to the captured substrings.
-You can find more details about the replacement pattern [here](http://www.lua.org/manual/5.4/manual.html#pdf-string.gsub) in the Lua reference manual.
+You can find more details about the replacement pattern in the Lua [reference manual](http://www.lua.org/manual/5.4/manual.html#pdf-string.gsub).
 
 The second overload ```pg::lex::gsub( str, pat, function, count = -1 )``` replaces the match with te result of the function that is called for each match.
 The function must accept a match result, that is templated on the character type of the input string, as parameter.
