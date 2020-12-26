@@ -21,7 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <cstring>
 #include <cassert>
 
 #include <string>
@@ -163,6 +162,8 @@ private:
     static constexpr int                  max_local = 2;
     capture< CharT >                      local[ max_local ];
     std::unique_ptr< capture< CharT >[] > alloc;
+
+    static_assert( MAXCAPTURES > max_local );
 };
 
 struct matchdepth_sentinel
@@ -243,8 +244,8 @@ public:
         iterator   operator --( int ) noexcept { const auto tmp = iterator( cap - 1 ); move( -1 ); return tmp; }
         iterator & operator +=( int i ) noexcept { move( i ); return *this; }
         iterator & operator -=( int i ) noexcept { move( -i ); return *this; }
-        iterator   operator +( int i ) const noexcept { assert( cap); return iterator( cap + i ); }
-        iterator   operator -( int i ) const noexcept { assert( cap); return iterator( cap - i ); }
+        iterator   operator +( int i ) const noexcept { assert( cap ); return iterator( cap + i ); }
+        iterator   operator -( int i ) const noexcept { assert( cap ); return iterator( cap - i ); }
         bool       operator ==( const iterator &other ) const noexcept { return cap == other.cap; }
         bool       operator !=( const iterator &other ) const noexcept { return cap != other.cap; }
 
@@ -636,9 +637,11 @@ const StrCharT * match_capture( MS &ms, const StrCharT * s, PatCharT c )
         throw lex_error( capture_invalid_index );
     }
 
-    const int len = ms.captures[ i ].len();
+    const int len            = ms.captures[ i ].len();
+    const StrCharT * c_begin = ms.captures[ i ].init();
+    const StrCharT * c_end   = c_begin + len;
     if( ( ms.s_end - s ) >= len &&
-        memcmp( ms.captures[ i ].init(), s, len * sizeof( c ) ) == 0 )
+        std::equal( c_begin, c_end, s ) )
     {
         return s + len;
     }
