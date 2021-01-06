@@ -1,6 +1,6 @@
 # v1.0.1
 
-- Reduced the size of the match results by optimizing it for patterns with up to 2 captures.
+- Reduced the size of a match result object by optimizing it for patterns with up to 2 captures.
 
 # v1.0.0
 
