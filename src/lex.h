@@ -69,7 +69,7 @@ template< typename T >                                      struct string_traits
 template< typename T >                                      struct string_traits< T && >                                      : string_traits< T >   {};
 
 
-template< typename, typename, typename >
+template< typename, typename >
 struct match_state;
 
 template< typename CharT >
@@ -216,7 +216,7 @@ template< typename CharT >
 struct basic_match_result
 {
 private:
-    template< typename, typename, typename >
+    template< typename, typename >
     friend struct detail::match_state;
 
     std::pair< int, int >     pos   = { -1, -1 };  // The indices where the match starts and ends
@@ -333,10 +333,10 @@ using u32match_result = basic_match_result< char32_t >;
 namespace detail
 {
 
-template< typename StrCharT, typename PatCharT, typename MR >
+template< typename StrCharT, typename PatCharT>
 struct match_state
 {
-    match_state( const StrCharT * str_begin, const StrCharT * str_end, const PatCharT * pat_end, MR &mr ) noexcept
+    match_state( const StrCharT * str_begin, const StrCharT * str_end, const PatCharT * pat_end, basic_match_result< StrCharT> & mr ) noexcept
         : s_begin( str_begin )
         , s_end( str_end )
         , p_end( pat_end )
@@ -374,14 +374,14 @@ struct match_state
 };
 
 
-template< typename MS, typename StrCharT, typename PatCharT >
-const StrCharT * match( MS &ms, const StrCharT * s, const PatCharT * p );
+template< typename StrCharT, typename PatCharT >
+const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p );
 
 bool match_class( int c, int cl ) noexcept;
 
 
-template< typename MS, typename PatCharT >
-const PatCharT * classend( const MS &ms, const PatCharT * p )
+template< typename StrCharT, typename PatCharT >
+const PatCharT * classend( const match_state< StrCharT, PatCharT > & ms, const PatCharT * p )
 {
     switch( *p++ )
     {
@@ -457,8 +457,8 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
 }
 
 
-template< typename MS, typename StrCharT, typename PatCharT >
-bool singlematch( const MS &ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep ) noexcept
+template< typename StrCharT, typename PatCharT >
+bool singlematch( const match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep ) noexcept
 {
     if( s < ms.s_end )
     {
@@ -484,8 +484,8 @@ bool singlematch( const MS &ms, const StrCharT * s, const PatCharT * p, const Pa
 }
 
 
-template< typename MS, typename StrCharT, typename PatCharT >
-const StrCharT * matchbalance( const MS &ms, const StrCharT * s, const PatCharT * p )
+template< typename StrCharT, typename PatCharT >
+const StrCharT * matchbalance( const match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p )
 {
     if( p >= ms.p_end )
     {
@@ -520,8 +520,8 @@ const StrCharT * matchbalance( const MS &ms, const StrCharT * s, const PatCharT 
 }
 
 
-template< typename MS, typename StrCharT, typename PatCharT >
-const StrCharT * max_expand( MS &ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep )
+template< typename StrCharT, typename PatCharT >
+const StrCharT * max_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep )
 {
     ptrdiff_t i = 0;
     while( singlematch( ms, s + i, p, ep ) )
@@ -542,8 +542,8 @@ const StrCharT * max_expand( MS &ms, const StrCharT * s, const PatCharT * p, con
 }
 
 
-template< typename MS, typename StrCharT, typename PatCharT >
-const StrCharT * min_expand( MS &ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep )
+template< typename StrCharT, typename PatCharT >
+const StrCharT * min_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep )
 {
     for( ; ; )
     {
@@ -563,8 +563,8 @@ const StrCharT * min_expand( MS &ms, const StrCharT * s, const PatCharT * p, con
 }
 
 
-template< typename MS, typename StrCharT, typename PatCharT >
-auto start_capture( MS &ms, const StrCharT * s, const PatCharT * p )
+template< typename StrCharT, typename PatCharT >
+auto start_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p )
 {
     if( ms.level >= MAXCAPTURES )
     {
@@ -596,8 +596,8 @@ auto start_capture( MS &ms, const StrCharT * s, const PatCharT * p )
 }
 
 
-template< typename MS, typename StrCharT, typename PatCharT >
-auto end_capture( MS &ms, const StrCharT * s, const PatCharT * p )
+template< typename StrCharT, typename PatCharT >
+auto end_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p )
 {
     int i = ms.level;
     for( --i ; i >= 0 ; --i )
@@ -621,8 +621,8 @@ auto end_capture( MS &ms, const StrCharT * s, const PatCharT * p )
 }
 
 
-template< typename MS, typename StrCharT, typename PatCharT >
-const StrCharT * match_capture( MS &ms, const StrCharT * s, PatCharT c )
+template< typename StrCharT, typename PatCharT >
+const StrCharT * match_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, PatCharT c )
 {
     const int i = c - '1';
 
@@ -645,8 +645,8 @@ const StrCharT * match_capture( MS &ms, const StrCharT * s, PatCharT c )
 }
 
 
-template< typename MS, typename StrCharT, typename PatCharT >
-const StrCharT * match( MS &ms, const StrCharT * s, const PatCharT * p )
+template< typename StrCharT, typename PatCharT >
+const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p )
 {
 	const matchdepth_sentinel mds( ms.matchdepth );
 
