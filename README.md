@@ -1,15 +1,15 @@
 # lex
 
-This is a C++ port of Lua's functions for pattern matching.
+This is a C++ library for Lua style pattern matching.
 
 Lua comes with a minimalistic pattern matching capability with features you won't find in common regular expressions implementations.
 This library provides an easy integration of Lua style pattern matching into your program.
 
-The library is tested by a simple [test program](https://github.com/PG1003/lex/blob/master/test/tests.cpp) that includes test cases for pattern matching from the Lua test suite.
+The library is tested by a simple [test program](https://github.com/PG1003/lex/blob/master/test/tests.cpp) that includes from the Lua test suite the test cases for pattern matching.
 There are additional tests to verify parts that are specific for the implementation of this library.  
 You can also use the test program to toy with the library.
 
-This project doesn't include makefiles or project files to build the library.
+This project includes a makefile to build the test program but doesn't include makefiles or project files to build the library.
 Integration in your own build environment should be easy since the library consists of only 2 source files ([lex.h](https://github.com/PG1003/lex/blob/master/src/lex.h) and [lex.cpp](https://github.com/PG1003/lex/blob/master/src/lex.cpp)) without any external dependencies.
 
 ## Features
@@ -19,12 +19,9 @@ You can read more about the patterns and its features in the [Lua reference manu
 
 * Uses only the C++ standard library, no external dependencies.
 * Full compatability with the match patterns as implemented in Lua 5.4. 
-* Support for a wide range of string types;
-  * All the ```std::string``` variants.
-  * All the ```std::string_view``` variants.
-  * Character pointers and arrays of type ```char```, ```wchar_t```, ```char16_t``` and ```char32_t```.
-* Matching a string with a pattern.
-* Substitute matching pattern with a replacement pattern or the result of a function.
+* Support for a wide range of string types such as std::string, std::string_view, character arrays and pointers. All of these can be based on the character types as defined by C++17.
+* Match a string with a pattern.
+* Substitute a matching pattern by a replacement pattern or the result of a function which is called for each match.
 * Iterate over a string with a pattern.
 
 ## Requirements
@@ -137,7 +134,7 @@ Output:
 ## Documentation
 
 The documentation here describes the usage of this library.  
-Details about the patterns are documented [here](http://www.lua.org/manual/5.4/manual.html#6.4.1) in the Lua reference manual.
+Details about the patterns are documented in the Lua [reference manual](http://www.lua.org/manual/5.4/manual.html#6.4.1).
 
 ### Lex errors
 
