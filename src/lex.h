@@ -58,7 +58,7 @@ template<>                                                  struct string_traits
 template<>                                                  struct string_traits< char16_t * > { static constexpr bool is_string = true; using char_type = char16_t; };
 template<>                                                  struct string_traits< char32_t * > { static constexpr bool is_string = true; using char_type = char32_t;};
 template< typename T, typename Traits, typename Allocater > struct string_traits< std::basic_string< T, Traits, Allocater > > : string_traits< T * > {};
-template< typename T, typename Traits>                      struct string_traits< std::basic_string_view< T, Traits > >       : string_traits< T * > {};
+template< typename T, typename Traits >                     struct string_traits< std::basic_string_view< T, Traits > >       : string_traits< T * > {};
 template< typename T >                                      struct string_traits< const T >                                   : string_traits< T >   {};
 template< typename T >                                      struct string_traits< const T * >                                 : string_traits< T * > {};
 template< typename T >                                      struct string_traits< T [] >                                      : string_traits< T * > {};
@@ -336,7 +336,7 @@ namespace detail
 template< typename StrCharT, typename PatCharT, typename MR >
 struct match_state
 {
-    match_state( const StrCharT * str_begin, const StrCharT * str_end, const PatCharT * pat_end, MR &mr )
+    match_state( const StrCharT * str_begin, const StrCharT * str_end, const PatCharT * pat_end, MR &mr ) noexcept
         : s_begin( str_begin )
         , s_end( str_end )
         , p_end( pat_end )
@@ -347,12 +347,12 @@ struct match_state
         reprepstate();
     }
 
-    void reprepstate()
+    void reprepstate() noexcept
     {
         assert( matchdepth == MAXCCALLS );
 
         level = 0;
-        pos   = { -1l, -1l };
+        pos   = { -1, -1 };
     }
 
     void check_captures() const
@@ -420,10 +420,7 @@ const PatCharT * classend( const MS &ms, const PatCharT * p )
 template< typename StrCharT, typename PatCharT >
 bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) noexcept
 {
-    using unsigned_c_t = typename std::make_unsigned< StrCharT >::type;
-    using unsigned_p_t = typename std::make_unsigned< PatCharT >::type;
-
-    const auto uc = static_cast< unsigned_c_t >( c );
+    const auto uc = static_cast< char32_t >( c );
 
     bool ret = true;
     if( *( p + 1 ) == '^' )
@@ -444,14 +441,14 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
         else if( ( *( p + 1 ) == '-' ) && ( p + 2 < ep ) )
         {
             p += 2;
-            const auto min = static_cast< unsigned_p_t >( *( p - 2 ) );
-            const auto max = static_cast< unsigned_p_t >( *p );
+            const auto min = static_cast< char32_t >( *( p - 2 ) );
+            const auto max = static_cast< char32_t >( *p );
             if( min <= uc && uc <= max )
             {
                 return ret;
             }
         }
-        else if( static_cast< unsigned_p_t >( *p ) == uc )
+        else if( static_cast< char32_t >( *p ) == uc )
         {
             return ret;
         }
@@ -461,14 +458,11 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
 
 
 template< typename MS, typename StrCharT, typename PatCharT >
-bool singlematch( const MS &ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep )
+bool singlematch( const MS &ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep ) noexcept
 {
     if( s < ms.s_end )
     {
-        using unsigned_str_char_type = typename std::make_unsigned< StrCharT >::type;
-        using unsigned_pat_char_type = typename std::make_unsigned< PatCharT >::type;
-
-        const auto c = static_cast< unsigned_str_char_type >( *s );
+        const auto c = *s;
 
         switch( *p )
         {
@@ -482,7 +476,7 @@ bool singlematch( const MS &ms, const StrCharT * s, const PatCharT * p, const Pa
             return matchbracketclass( c, p, ep - 1 );
 
         default:
-            return static_cast< unsigned_pat_char_type >( *p ) == c;
+            return static_cast< char32_t >( *p ) == static_cast< char32_t >( c );
         }
     }
 
@@ -508,14 +502,15 @@ const StrCharT * matchbalance( const MS &ms, const StrCharT * s, const PatCharT 
         int count    = 1;
         while( ++s < ms.s_end )
         {
-            if( static_cast< char32_t >( *s ) == e )
+            const auto uc = static_cast< char32_t >( *s );
+            if( uc == e )
             {
                 if( --count == 0 )
                 {
                     return s + 1;
                 }
             }
-            else if( static_cast< char32_t >( *s ) == b )
+            else if( uc == b )
             {
               ++count;
             }
