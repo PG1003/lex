@@ -260,10 +260,6 @@ public:
             sv = *cap;
         }
 
-        iterator( const detail::captures< CharT > & c ) noexcept
-            : iterator( c.data() )
-        {}
-
         void move( int i ) noexcept
         {
             assert( cap );
@@ -275,7 +271,7 @@ public:
     /**
      * \brief Returns an iterator to the begin of the capture list.
      */
-    iterator begin() const noexcept { return { captures }; }
+    iterator begin() const noexcept { return { captures.data() }; }
 
     /**
      * \brief Returns an iterator to the end of the capture list.
@@ -285,7 +281,7 @@ public:
     /**
      * \brief Returns the number of captures.
      */
-    size_t size() const noexcept { return level; }
+    size_t size() const noexcept { assert( level >= 0 ); return level; }
 
     /**
      * \brief Conversion to bool for easy evaluation if the match result contains match data.
