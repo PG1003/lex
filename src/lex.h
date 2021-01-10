@@ -308,9 +308,11 @@ public:
     }
 
     /**
-     * \brief Returns a pair of indices that tells the position of the match in a string.
+     * \brief Returns a pair of indices that tells the position of the match in the string.
      *
      * First is the start index of the match and second one past the last character of the match.
+     *
+     * \note first and second are -1 when the match result doesn't contain match data.
      */
     const std::pair< int, int > & position() const noexcept { return pos; }
 
@@ -648,9 +650,9 @@ const StrCharT * match_capture( match_state< StrCharT, PatCharT > & ms, const St
 template< typename StrCharT, typename PatCharT >
 const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p )
 {
-	const matchdepth_sentinel mds( ms.matchdepth );
+    const matchdepth_sentinel mds( ms.matchdepth );
 
-    init: // Using goto's to optimize tail recursion
+    init: // Using gotos to optimize tail recursion
     if( p == ms.p_end )
     {
         return s;
@@ -1082,15 +1084,15 @@ auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
     std::basic_string< str_char_type > result;
     result.reserve( c.s.end - c.s.begin );
 
-    const str_char_type * cp_begin = c.s.begin;
+    const str_char_type * copy_begin = c.s.begin;
     while( ++match_it != match_end_it && count != 0 )
     {
         --count;
 
-        const auto & mr              = *match_it;
-        const str_char_type * cp_end = c.s.begin + mr.position().first;
+        const auto & mr                = *match_it;
+        const str_char_type * copy_end = c.s.begin + mr.position().first;
 
-        result.append( cp_begin, cp_end );
+        result.append( copy_begin, copy_end );
 
         auto r_begin = r.begin;
         for( auto find = std::find( r_begin, r.end, '%' ) ;
@@ -1113,8 +1115,8 @@ auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
             }
             else if( std::isdigit( cap_char ) )  // %n
             {
-                const auto cap_index = cap_char - '1';
-                if( static_cast< size_t >( cap_index ) >= mr.size() )
+                const auto cap_index = static_cast< size_t >( cap_char - '1' );
+                if( cap_index >= mr.size() )
                 {
                     throw lex_error( capture_invalid_index );
                 }
@@ -1137,10 +1139,10 @@ auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
 
         result.append( r_begin, r.end );
 
-        cp_begin = c.s.begin + mr.position().second;
+        copy_begin = c.s.begin + mr.position().second;
     }
 
-    result.append( cp_begin, c.s.end );
+    result.append( copy_begin, c.s.end );
 
     return result;
 }
@@ -1170,21 +1172,21 @@ auto gsub( StrT&& str, PatT&& pat, Function&& func, int count = -1 )
     std::basic_string< str_char_type > result;
     result.reserve( c.s.end - c.s.begin );
 
-    const str_char_type * cp_begin = c.s.begin;
+    const str_char_type * copy_begin = c.s.begin;
     while( ++match_it != match_end_it && count != 0 )
     {
         --count;
 
-        const auto & mr              = *match_it;
-        const str_char_type * cp_end = c.s.begin + mr.position().first;
+        const auto & mr                = *match_it;
+        const str_char_type * copy_end = c.s.begin + mr.position().first;
 
-        result.append( cp_begin, cp_end );
+        result.append( copy_begin, copy_end );
         result.append( func( mr ) );
 
-        cp_begin = c.s.begin + mr.position().second;
+        copy_begin = c.s.begin + mr.position().second;
     }
 
-    result.append( cp_begin, c.s.end );
+    result.append( copy_begin, c.s.end );
 
     return result;
 }
