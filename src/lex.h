@@ -333,6 +333,9 @@ using u32match_result = basic_match_result< char32_t >;
 namespace detail
 {
 
+template< typename StrCharT, typename PatCharT >
+using common_unsigned_char = typename std::make_unsigned< typename std::common_type< StrCharT, PatCharT >::type >;
+
 template< typename StrCharT, typename PatCharT>
 struct match_state
 {
@@ -420,7 +423,9 @@ const PatCharT * classend( const match_state< StrCharT, PatCharT > & ms, const P
 template< typename StrCharT, typename PatCharT >
 bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) noexcept
 {
-    const auto uc = static_cast< char32_t >( c );
+    using uchar_t = typename common_unsigned_char< StrCharT, PatCharT >::type;
+
+    const auto uc = static_cast< uchar_t >( c );
 
     bool ret = true;
     if( *( p + 1 ) == '^' )
@@ -441,14 +446,14 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
         else if( ( *( p + 1 ) == '-' ) && ( p + 2 < ep ) )
         {
             p += 2;
-            const auto min = static_cast< char32_t >( *( p - 2 ) );
-            const auto max = static_cast< char32_t >( *p );
+            const auto min = static_cast< uchar_t >( *( p - 2 ) );
+            const auto max = static_cast< uchar_t >( *p );
             if( min <= uc && uc <= max )
             {
                 return ret;
             }
         }
-        else if( static_cast< char32_t >( *p ) == uc )
+        else if( static_cast< uchar_t >( *p ) == uc )
         {
             return ret;
         }
@@ -460,6 +465,8 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
 template< typename StrCharT, typename PatCharT >
 bool singlematch( const match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep ) noexcept
 {
+    using uchar_t = typename common_unsigned_char< StrCharT, PatCharT >::type;
+
     if( s < ms.s_end )
     {
         const auto c = *s;
@@ -476,7 +483,7 @@ bool singlematch( const match_state< StrCharT, PatCharT > & ms, const StrCharT *
             return matchbracketclass( c, p, ep - 1 );
 
         default:
-            return static_cast< char32_t >( *p ) == static_cast< char32_t >( c );
+            return static_cast< uchar_t >( *p ) == static_cast< uchar_t >( c );
         }
     }
 
@@ -487,22 +494,24 @@ bool singlematch( const match_state< StrCharT, PatCharT > & ms, const StrCharT *
 template< typename StrCharT, typename PatCharT >
 const StrCharT * matchbalance( const match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p )
 {
+    using uchar_t = typename common_unsigned_char< StrCharT, PatCharT >::type;
+
     if( p >= ms.p_end )
     {
         throw lex_error( balanced_no_arguments );
     }
-    if( static_cast< char32_t >( *s ) != static_cast< char32_t >( *p ) )
+    if( static_cast< uchar_t >( *s ) != static_cast< uchar_t >( *p ) )
     {
         return nullptr;
     }
     else
     {
-        const auto b = static_cast< char32_t >( *p );
-        const auto e = static_cast< char32_t >( *( p + 1 ) );
+        const auto b = static_cast< uchar_t >( *p );
+        const auto e = static_cast< uchar_t >( *( p + 1 ) );
         int count    = 1;
         while( ++s < ms.s_end )
         {
-            const auto uc = static_cast< char32_t >( *s );
+            const auto uc = static_cast< uchar_t >( *s );
             if( uc == e )
             {
                 if( --count == 0 )
