@@ -183,16 +183,16 @@ A context also works with a ranged based for-loop as shown in the [Iterate with 
 
 ### Substitute
 
-There are two overloaded functions that substitutes a matched substring with a replacement.
+There are two overloaded functions that substitute a matched substring with a replacement.
 
 The ```pg::lex::gsub( str, pat, repl, count = -1 )``` overload replaces the match with a replacement pattern.
 A replacement pattern can have references to the captured substrings.
 You can find more details about the replacement pattern in the Lua [reference manual](http://www.lua.org/manual/5.4/manual.html#pdf-string.gsub).
 
 The second overload ```pg::lex::gsub( str, pat, function, count = -1 )``` replaces the match with te result of the function that is called for each match.
-The function must accept a match result, that is templated on the character type of the input string, as parameter.
+The function must accept a match result as parameter that is templated on the same character type as the input string.
 
 The count parameter limits number of substitutes with a negative value for an unlimited count.
 
 The ```string.gsub``` function in Lua also supports tables as lookup for replacements.
-This library doesn't support this Lua feature.
+This library does _not_ support this Lua feature.
