@@ -1,3 +1,6 @@
+# v1.x.x
+- Added support for char8_t when compiling with C++20.
+
 # v1.0.1
 
 - Reduced the size of a match result object by optimizing it for patterns with up to 2 captures.
