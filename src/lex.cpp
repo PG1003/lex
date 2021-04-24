@@ -61,14 +61,14 @@ static const char * lex_error_text( pg::lex::error_type code ) noexcept
     case pg::lex::pattern_too_complex:                  return "pattern too complex";
     case pg::lex::pattern_ends_with_percent:            return "malformed pattern (ends with '%%')";
     case pg::lex::pattern_missing_closing_bracket:      return "malformed pattern (missing ']')";
-    case pg::lex::balanced_no_arguments:                return "malformed pattern (missing arguments to '%b')";
+    case pg::lex::balanced_no_arguments:                return "malformed pattern (missing arguments to '%%b')";
     case pg::lex::frontier_no_open_bracket:             return "missing '[' after '%%f' in pattern";
     case pg::lex::capture_too_many:                     return "too many captures";
     case pg::lex::capture_invalid_pattern:              return "invalid pattern capture";
     case pg::lex::capture_invalid_index:                return "invalid capture index";
     case pg::lex::capture_not_finished:                 return "unfinished capture";
     case pg::lex::capture_out_of_range:                 return "capture out of range";
-    case pg::lex::percent_invalid_use_in_replacement:   return "invalid use of '%' in replacement string";
+    case pg::lex::percent_invalid_use_in_replacement:   return "invalid use of '%%' in replacement string";
     default:                                            return "lex error";
     }
 }
