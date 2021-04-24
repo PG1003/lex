@@ -535,6 +535,10 @@ static void string_types()
     const char * const     pat   = ".*b";
     const wchar_t * const  wstr  = L"aaab";
     const wchar_t * const  wpat  = L".*b";
+#if defined( __cpp_lib_char8_t )
+    const char8_t * const str8 = u8"aaab";
+    const char8_t * const pat8 = u8".*b";
+#endif
     const char16_t * const str16 = u"aaab";
     const char16_t * const pat16 = u".*b";
     const char32_t * const str32 = U"aaab";
@@ -544,6 +548,10 @@ static void string_types()
     std::string    pattern( ".*b" );
     std::wstring   wstring( L"aaab" );
     std::wstring   wpattern( L".*b" );
+#if defined( __cpp_lib_char8_t )
+    std::u8string  string8( u8"aaab" );
+    std::u8string  pattern8( u8".*b" );
+#endif
     std::u16string string16( u"aaab" );
     std::u16string pattern16( u".*b" );
     std::u32string string32( U"aaab" );
@@ -556,31 +564,49 @@ static void string_types()
 
     assert_true( lex::match( str, pat ) );
     assert_true( lex::match( wstr, wpat ) );
+#if defined( __cpp_lib_char8_t )
+    assert_true( lex::match( str8, pat8 ) );
+#endif
     assert_true( lex::match( str16, pat16 ) );
     assert_true( lex::match( str32, pat32 ) );
 
     assert_true( lex::match( str, pat32 ) );
     assert_true( lex::match( wstr, pat32 ) );
+#if defined( __cpp_lib_char8_t )
+    assert_true( lex::match( str8, pat32 ) );
+#endif
     assert_true( lex::match( str16, pat32 ) );
     assert_true( lex::match( str32, pat ) );
 
     assert_true( lex::match( string, pattern ) );
     assert_true( lex::match( wstring, wpattern ) );
+#if defined( __cpp_lib_char8_t )
+    assert_true( lex::match( string8, pattern8 ) );
+#endif
     assert_true( lex::match( string16, pattern16 ) );
     assert_true( lex::match( string32, pattern32 ) );
 
     assert_true( lex::match( string, wpattern ) );
     assert_true( lex::match( wstring, pattern16 ) );
+#if defined( __cpp_lib_char8_t )
+    assert_true( lex::match( string8, wpattern ) );
+#endif
     assert_true( lex::match( string16, wpattern ) );
     assert_true( lex::match( string32, wpattern ) );
 
     assert_true( lex::match( std::string( "aaab" ), ".*b" ) );
     assert_true( lex::match( std::wstring( L"aaab" ), ".*b" ) );
+#if defined( __cpp_lib_char8_t )
+    assert_true( lex::match( std::u8string( u8"aaab" ), ".*b" ) );
+#endif
     assert_true( lex::match( std::u16string( u"aaab" ), ".*b" ) );
     assert_true( lex::match( std::u32string( U"aaab" ), U".*b" ) );
 
     assert_true( lex::match( "aaab"sv, ".*b" ) );
     assert_true( lex::match( L"aaab"sv, ".*b" ) );
+#if defined( __cpp_lib_char8_t )
+    assert_true( lex::match( u8"aaab"sv, ".*b" ) );
+#endif
     assert_true( lex::match( u"aaab"sv, ".*b" ) );
     assert_true( lex::match( U"aaab"sv, U".*b" ) );
 }
@@ -600,6 +626,15 @@ static void string_traits()
     assert_true( ( std::is_same< lex::detail::string_traits< const wchar_t [] >::char_type, wchar_t >::value ) )
     assert_true( ( std::is_same< lex::detail::string_traits< wchar_t [ 42 ] >::char_type, wchar_t >::value ) );
     assert_true( ( std::is_same< lex::detail::string_traits< const wchar_t [ 42 ] >::char_type, wchar_t >::value ) );
+
+#if defined( __cpp_lib_char8_t )
+    assert_true( ( std::is_same< lex::detail::string_traits< char8_t * >::char_type, char8_t >::value ) );
+    assert_true( ( std::is_same< lex::detail::string_traits< const char8_t * >::char_type, char8_t >::value ) );
+    assert_true( ( std::is_same< lex::detail::string_traits< char8_t [] >::char_type, char8_t >::value ) );
+    assert_true( ( std::is_same< lex::detail::string_traits< const char8_t [] >::char_type, char8_t >::value ) );
+    assert_true( ( std::is_same< lex::detail::string_traits< char8_t [ 42 ] >::char_type, char8_t >::value ) );
+    assert_true( ( std::is_same< lex::detail::string_traits< const char8_t [ 42 ] >::char_type, char8_t >::value ) );
+#endif
 
     assert_true( ( std::is_same< lex::detail::string_traits< char16_t * >::char_type, char16_t >::value ) );
     assert_true( ( std::is_same< lex::detail::string_traits< const char16_t * >::char_type, char16_t >::value ) );
@@ -624,6 +659,13 @@ static void string_traits()
     assert_true( ( std::is_same< lex::detail::string_traits< std::wstring & >::char_type, wchar_t >::value ) );
     assert_true( ( std::is_same< lex::detail::string_traits< const std::wstring >::char_type, wchar_t >::value ) );
     assert_true( ( std::is_same< lex::detail::string_traits< const std::wstring & >::char_type, wchar_t >::value ) );
+
+#if defined( __cpp_lib_char8_t )
+    assert_true( ( std::is_same< lex::detail::string_traits< std::u8string >::char_type, char8_t >::value ) );
+    assert_true( ( std::is_same< lex::detail::string_traits< std::u8string & >::char_type, char8_t >::value ) );
+    assert_true( ( std::is_same< lex::detail::string_traits< const std::u8string >::char_type, char8_t >::value ) );
+    assert_true( ( std::is_same< lex::detail::string_traits< const std::u8string & >::char_type, char8_t >::value ) );
+#endif
 
     assert_true( ( std::is_same< lex::detail::string_traits< std::u16string >::char_type, char16_t >::value ) );
     assert_true( ( std::is_same< lex::detail::string_traits< std::u16string & >::char_type, char16_t >::value ) );

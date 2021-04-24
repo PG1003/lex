@@ -57,6 +57,9 @@ namespace detail
 template< typename T >                                      struct string_traits               { static constexpr bool is_string = false; };
 template<>                                                  struct string_traits< char * >     { static constexpr bool is_string = true; using char_type = char; };
 template<>                                                  struct string_traits< wchar_t * >  { static constexpr bool is_string = true; using char_type = wchar_t; };
+#if defined( __cpp_lib_char8_t )
+template<>                                                  struct string_traits< char8_t * >  { static constexpr bool is_string = true; using char_type = char8_t; };
+#endif
 template<>                                                  struct string_traits< char16_t * > { static constexpr bool is_string = true; using char_type = char16_t; };
 template<>                                                  struct string_traits< char32_t * > { static constexpr bool is_string = true; using char_type = char32_t;};
 template< typename T, typename Traits, typename Allocater > struct string_traits< std::basic_string< T, Traits, Allocater > > : string_traits< T * > {};
@@ -322,11 +325,17 @@ public:
 
 extern template struct basic_match_result< char >;
 extern template struct basic_match_result< wchar_t >;
+#if defined( __cpp_lib_char8_t )
+extern template struct basic_match_result< char8_t >;
+#endif
 extern template struct basic_match_result< char16_t >;
 extern template struct basic_match_result< char32_t >;
 
 using match_result    = basic_match_result< char >;
 using wmatch_result   = basic_match_result< wchar_t >;
+#if defined( __cpp_lib_char8_t )
+using u8match_result  = basic_match_result< char8_t >;
+#endif
 using u16match_result = basic_match_result< char16_t >;
 using u32match_result = basic_match_result< char32_t >;
 
@@ -823,6 +832,9 @@ struct string_context
 
 extern template struct string_context< char >;
 extern template struct string_context< wchar_t >;
+#if defined( __cpp_lib_char8_t )
+extern template struct string_context< char8_t >;
+#endif
 extern template struct string_context< char16_t >;
 extern template struct string_context< char32_t >;
 
@@ -862,6 +874,9 @@ struct pattern_context
 
 extern template struct pattern_context< char >;
 extern template struct pattern_context< wchar_t >;
+#if defined( __cpp_lib_char8_t )
+extern template struct pattern_context< char8_t >;
+#endif
 extern template struct pattern_context< char16_t >;
 extern template struct pattern_context< char32_t >;
 
