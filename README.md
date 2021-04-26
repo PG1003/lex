@@ -5,7 +5,7 @@ This is a C++ library for Lua style pattern matching.
 Lua comes with a minimalistic pattern matching capability with features you won't find in common regular expressions implementations.
 This library provides an easy integration of Lua style pattern matching into your program.
 
-The library is tested by a simple [test program](https://github.com/PG1003/lex/blob/master/test/tests.cpp) that includes from the Lua test suite the test cases for pattern matching.
+The library is tested by a simple [test program](https://github.com/PG1003/lex/blob/master/test/tests.cpp) that includes tests which are ported from the Lua test suite.
 There are additional tests to verify parts that are specific for the implementation of this library.  
 You can also use the test program to toy with the library.
 
@@ -19,14 +19,14 @@ You can read more about the patterns and its features in the [Lua reference manu
 
 * Uses only the C++ standard library, no external dependencies.
 * Full compatability with the match patterns as implemented in Lua 5.4. 
-* Support for a wide range of string types such as std::string, std::string_view, character arrays and pointers. All of these can be based on the character types as defined by C++17.
+* Support for a wide range of string types such as std::string, std::string_view, character arrays and pointers. All of these can be based on the character types as defined by C++17 and C++20.
 * Match a string with a pattern.
 * Substitute a matching pattern by a replacement pattern or the result of a function which is called for each match.
 * Iterate over a string with a pattern.
 
 ## Requirements
 
-* A C++17 compliant compiler.
+* Minimal a C++17 compliant compiler.
 
 ## Examples
 
@@ -155,6 +155,7 @@ The following predefined match result types are made available in the ```pg::lex
 |-----------|------------------|
 | ```char``` | ```match_result``` |
 | ```wchar``` | ```wmatch_result``` |
+| ```char8_t``` (C++20) | ```u8match_result``` |
 | ```char16_t``` | ```u16match_result``` |
 | ```char32_t``` | ```u32match_result``` |
 
