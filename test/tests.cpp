@@ -12,6 +12,7 @@
 
 
 using namespace pg;
+using namespace std::literals;
 
 static int total_checks  = 0;
 static int failed_checks = 0;
@@ -25,11 +26,6 @@ static bool report_failed_check( const char* const file, const int line, const c
 
 #define assert_true( c ) do { ++total_checks; ( c ) || report_failed_check( __FILE__, __LINE__, #c ); } while( false );
 #define assert_false( c ) do { ++total_checks; !( c ) || report_failed_check( __FILE__, __LINE__, #c ); } while( false );
-
-
-
-using namespace pg;
-using namespace std::literals;
 
 
 static void match()
@@ -174,7 +170,7 @@ static void match()
         assert_true( result1.position().second == 5 );
 
         auto result2 = lex::match( " alo aalo allo", "%f[%S](.-%f[%s].-%f[%S])" );
-        assert( result2.at( 0 ) == "alo " );
+        assert_false( result2.at( 0 ) == "alo " );
     }
 
     {
@@ -753,6 +749,30 @@ static void readme_examples()
         };
 
         assert_true( lex::gsub( str, "%s*%w+", function, 2 ) == "PG1003 three four" );
+    }
+
+    {
+        auto a = pg::lex::gsub( "hello world", "(%w+)", "%1 %1" );
+        assert_true( a == "hello hello world world" );
+
+        auto b = pg::lex::gsub("hello world", "%w+", "%0 %0", 1);
+        auto c = pg::lex::gsub("hello world", "%w+", "%1 %1", 1);
+        assert_true( b == "hello hello world" );
+        assert_true( b == c );
+
+        auto d = pg::lex::gsub("hello world from Lua", "(%w+)%s*(%w+)", "%2 %1");
+        assert_true( d == "world hello Lua from" );
+    }
+
+    {
+        std::array< std::pair< int, int >, 3 > expected = { std::pair{ 0, 1 }, std::pair{ 2, 2 }, std::pair{ 3, 3 } };
+        std::vector< std::pair< int, int > >   results;
+        for( const auto& match : pg::lex::context( "abc", "()a*()" ) )
+        {
+            results.push_back( match.position() );
+        }
+
+        assert_true( std::equal( expected.cbegin(), expected.cend(), results.cbegin(), results.cend() ) );
     }
 }
 
