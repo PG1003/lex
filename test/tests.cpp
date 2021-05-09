@@ -170,7 +170,7 @@ static void match()
         assert_true( result1.position().second == 5 );
 
         auto result2 = lex::match( " alo aalo allo", "%f[%S](.-%f[%s].-%f[%S])" );
-        assert_false( result2.at( 0 ) == "alo " );
+        assert_true( result2.at( 0 ) == "alo " );
     }
 
     {
