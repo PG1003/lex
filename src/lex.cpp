@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 #include "lex.h"
-#include <locale.h>
+#include <cctype>
 
 
 template struct pg::lex::basic_match_result< char >;
@@ -49,7 +49,7 @@ template struct pg::lex::detail::pattern_context< char16_t >;
 template struct pg::lex::detail::pattern_context< char32_t >;
 
 
-pg::lex::detail::matchdepth_sentinel::matchdepth_sentinel( int &counter )
+pg::lex::detail::matchdepth_sentinel::matchdepth_sentinel( int & counter )
     : m_counter( counter )
 {
     if( --m_counter < 0 )
