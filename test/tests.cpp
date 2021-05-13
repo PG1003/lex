@@ -713,7 +713,7 @@ static void readme_examples()
         std::vector< std::pair< std::u16string_view, std::u16string_view > > results;
 
         auto str = u"foo = 42;   bar= 1337; baz = PG =1003 ;";
-        for( auto match : lex::context( str, "(%a+)%s*=%s*(%d+)%s*;" ) )
+        for( auto & match : lex::context( str, "(%a+)%s*=%s*(%d+)%s*;" ) )
         {
             assert_true( match.size() == 2 );
             results.emplace_back( match.at( 0 ), match.at( 1 ) );

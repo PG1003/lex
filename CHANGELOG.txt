@@ -1,4 +1,4 @@
-# v1.x.x
+# v1.1.0
 - Added support for char8_t when compiling with C++20.
 
 # v1.0.1

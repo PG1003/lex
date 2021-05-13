@@ -141,8 +141,9 @@ You can get the exception description and number by calling the `what()` and `co
 
 ### Match result
 
-A successful match returns a match result that contains one or more captures, the position and size of the matched substring. 
+A successful match returns a match result that contains one or more [captures](#captures), the position and size of the matched substring. 
 The number of captures depends on the pattern; the captures defined in the pattern or one for whole match when the pattern doesn't have captures.
+For convenience a match result has een `operator bool` that returns true when it contains at least one capture. 
 
 A match result is templated on the character type of the input string.
 The following predefined match result types are made available in the `pg::lex` namespace;
@@ -161,7 +162,7 @@ Match results can also be used with range based for-loops.
 
 ### Match
 
-The `pg::lex::match( string, pattern )` function searches for a [pattern](#Patterns) in a string and returns a match result.
+The `pg::lex::match( string, pattern )` function searches for a [pattern](#patterns) in a string and returns a match result.
 An empty match result is returned when no match was found.
 
 ### Iteration
@@ -170,13 +171,13 @@ To itereate over matches in a string you must create a context.
 A context is a `pg::lex::context` object with a reference to a input string and a pattern.
 
 You get a `pg::lex::gmatch_iterator` by calling the `pg::lex::begin` and `pg::lex::end` functions with a context as parameter.
-A `pg::lex::gmatch_iterator` behaves as a forward iterator; it can only advance with the `++` operator.
+A `pg::lex::gmatch_iterator` behaves like a forward iterator; it can only advance with the `++` operator.
 Gmatch iterators return match results when you dereference them. 
 
 The `pg::lex::begin` function creates an iterator and searches for the first match in the input string.
 The returned iterator is equal to the iterator returned by `pg::lex::end` when no match was found.
 
-A context also works with a ranged based for-loop as shown in the [Iterate with a pattern](#iterate-with-a-pattern) example.
+A `pg::lex::context` is compatible with ranged based for-loops as shown in the [Iterate with a pattern](#iterate-with-a-pattern) example.
 
 ### Substitute
 
@@ -194,8 +195,8 @@ This library does _not_ support this Lua feature.
 
 #### Replacement pattern
 
-A replacement pattern is a string that contains a repacement text which can include [captures](#Captures) of the match result.
-References to captures are marked as `%d` where d is a number between 1 and 9 to refrence the first up to nineth nineth capture.
+A replacement pattern is a string that contains a repacement text which can include [captures](#captures) of the match result.
+References to captures are marked as `%d` where d is a number between 1 and 9 to refrence the first up to nineth capture.
 `%0` stands for the whole match.
 The whole match will handled as one capture when a pattern didn't specified any captures.
 
@@ -204,7 +205,7 @@ auto a = pg::lex::gsub( "hello world", "(%w+)", "%1 %1" );
 assert( a == "hello hello world world" );
      
 auto b = pg::lex::gsub("hello world", "%w+", "%0 %0", 1); // Whole match
-auto c = pg::lex::gsub("hello world", "%w+", "%1 %1", 1); // Caputre; same as the whole match
+auto c = pg::lex::gsub("hello world", "%w+", "%1 %1", 1); // Same since there are no captures
 assert( b == "hello hello world" );
 assert( b == c );
      
@@ -214,7 +215,7 @@ assert( d == "world hello Lua from" );
 
 ### Patterns
 
-_For convenience this paragraph is copied from the patterns paragraph in the [Lua reference manual](http://www.lua.org/manual/5.4/manual.html#6.4.1) and adjusted to match with the usage of this library._
+_For convenience this paragraph is copied from the patterns paragraph in the [Lua reference manual](http://www.lua.org/manual/5.4/manual.html#6.4.1) and adjusted to match the usage of this library._
 
 Patterns are described by regular strings, which are interpreted when [matching](#match), [iterating](#iteration) and [substituting](#substitute).
 This section describes the syntax and the meaning (that is, what they match) of these strings.
@@ -243,14 +244,16 @@ Any non-alphanumeric character (including all punctuation characters, even the n
 A range of characters can be specified by separating the end characters of the range, in ascending order, with a `-`.
 All classes %x described above can also be used as components in set.
 All other characters in set represent themselves.
-For example, `[%w_]` (or `[_%w]`) represents all alphanumeric characters plus the underscore, `[0-7]` represents the octal digits, and `[0-7%l%-]` represents the octal digits plus the lowercase letters plus the `-` character.
+For example, `[%w_]` (or `[_%w]`) represents all alphanumeric characters plus the underscore, `[0-7]` represents the octal digits, and `[0-7%l%-]` represents the octal digits plus the lowercase letters plus the `-` character.  
 You can put a closing square bracket in a set by positioning it as the first character in the set.
-You can put a hyphen in a set by positioning it as the first or the last character in the set. (You can also use an escape for both cases.)
+You can put a hyphen in a set by positioning it as the first or the last character in the set. (You can also use an escape for both cases.)  
 The interaction between ranges and classes is not defined.
 Therefore, patterns like `[%a-z]` or `[a-%%]` have no meaning.
 * `[^set]` represents the complement of set, where set is interpreted as above.
+
 For all classes represented by single letters (`%a`, `%c`, etc.), the corresponding uppercase letter represents the complement of the class.
 For instance, `%S` represents all non-space characters.
+
 The definitions of letter, space, and other character groups depend on the current locale.
 In particular, the class `[a-z]` may not be equivalent to `%l`.
 
