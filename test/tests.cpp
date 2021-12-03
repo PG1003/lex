@@ -469,7 +469,7 @@ static void exceptions()
     {
         try
         {
-            lex::gsub( str, pat, repl );
+            (void)lex::gsub( str, pat, repl );
         }
         catch( const lex::lex_error& e )
         {
@@ -488,7 +488,7 @@ static void exceptions()
     try
     {
         auto mr = lex::match( "foo", "..." );
-        mr.at( 1 );
+        (void)mr.at( 1 );
         assert_true( 0 );
     }
     catch( const lex::lex_error& e )

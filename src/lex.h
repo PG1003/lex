@@ -209,7 +209,7 @@ public:
     lex_error( const char * ) = delete;
 
     lex_error( pg::lex::error_type ec ) noexcept;
-    error_type code() const noexcept { return error_code; }
+    [[nodiscard]] error_type code() const noexcept { return error_code; }
 };
 
 /**
@@ -240,19 +240,19 @@ public:
 
         iterator() noexcept : cap( nullptr ) {}
 
-        const std::basic_string_view< CharT > & operator *() const noexcept { assert( cap ); return sv; }
-        const std::basic_string_view< CharT > * operator ->() const noexcept { assert( cap ); return &sv; }
+        [[nodiscard]] const std::basic_string_view< CharT > & operator *() const noexcept { assert( cap ); return sv; }
+        [[nodiscard]] const std::basic_string_view< CharT > * operator ->() const noexcept { assert( cap ); return &sv; }
 
-        iterator & operator ++() noexcept { move( 1 ); return *this; }
-        iterator & operator --() noexcept { move( -1 ); return *this; }
-        iterator   operator ++( int ) noexcept { const auto tmp = iterator( cap + 1 ); move( 1 ); return tmp; }
-        iterator   operator --( int ) noexcept { const auto tmp = iterator( cap - 1 ); move( -1 ); return tmp; }
-        iterator & operator +=( int i ) noexcept { move( i ); return *this; }
-        iterator & operator -=( int i ) noexcept { move( -i ); return *this; }
-        iterator   operator +( int i ) const noexcept { assert( cap ); return iterator( cap + i ); }
-        iterator   operator -( int i ) const noexcept { assert( cap ); return iterator( cap - i ); }
-        bool       operator ==( const iterator &other ) const noexcept { return cap == other.cap; }
-        bool       operator !=( const iterator &other ) const noexcept { return cap != other.cap; }
+                      iterator & operator ++() noexcept { move( 1 ); return *this; }
+                      iterator & operator --() noexcept { move( -1 ); return *this; }
+                      iterator   operator ++( int ) noexcept { const auto tmp = iterator( cap + 1 ); move( 1 ); return tmp; }
+                      iterator   operator --( int ) noexcept { const auto tmp = iterator( cap - 1 ); move( -1 ); return tmp; }
+                      iterator & operator +=( int i ) noexcept { move( i ); return *this; }
+                      iterator & operator -=( int i ) noexcept { move( -i ); return *this; }
+        [[nodiscard]] iterator   operator +( int i ) const noexcept { assert( cap ); return iterator( cap + i ); }
+        [[nodiscard]] iterator   operator -( int i ) const noexcept { assert( cap ); return iterator( cap - i ); }
+        [[nodiscard]] bool       operator ==( const iterator &other ) const noexcept { return cap == other.cap; }
+        [[nodiscard]] bool       operator !=( const iterator &other ) const noexcept { return cap != other.cap; }
 
     private:
         const detail::capture< CharT > * cap = nullptr;
@@ -276,29 +276,29 @@ public:
     /**
      * \brief Returns an iterator to the begin of the capture list.
      */
-    iterator begin() const noexcept { return { captures.data() }; }
+    [[nodiscard]] iterator begin() const noexcept { return { captures.data() }; }
 
     /**
      * \brief Returns an iterator to the end of the capture list.
      */
-    iterator end() const noexcept { return { captures.data() + size() }; }
+    [[nodiscard]] iterator end() const noexcept { return { captures.data() + size() }; }
 
     /**
      * \brief Returns the number of captures.
      */
-    size_t size() const noexcept { assert( level >= 0 ); return level; }
+    [[nodiscard]] size_t size() const noexcept { assert( level >= 0 ); return level; }
 
     /**
      * \brief Conversion to bool for easy evaluation if the match result contains match data.
      */
-    operator bool() const noexcept { return level > 0; }
+    [[nodiscard]] operator bool() const noexcept { return level > 0; }
 
     /**
      * \brief Returns a std::string_view of the requested capture.
      *
      * This function throws a 'capture_out_of_range' when match result doesn't have a capture at the requested index.
      */
-    std::basic_string_view< CharT > at( size_t i ) const
+    [[nodiscard]] std::basic_string_view< CharT > at( size_t i ) const
     {
         if( static_cast< int >( i ) >= level )
         {
@@ -315,12 +315,12 @@ public:
      *
      * \note first and second are -1 when the match result doesn't contain match data.
      */
-    const std::pair< int, int > & position() const noexcept { return pos; }
+    [[nodiscard]] const std::pair< int, int > & position() const noexcept { return pos; }
 
     /**
      * \brief Returns the length of the match.
      */
-    size_t length() const noexcept { return pos.second - pos.first; }
+    [[nodiscard]] size_t length() const noexcept { return pos.second - pos.first; }
 };
 
 extern template struct basic_match_result< char >;
@@ -736,7 +736,7 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
                 break;
             }
 
-        [[fallthrough]]
+        [[fallthrough]];
         default:  // Pattern class plus optional suffix
         dflt:
         {
@@ -765,7 +765,7 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
 
                 case '+':   // 1 or more repetitions
                     ++s;    // 1 match already done
-                [[fallthrough]]
+                [[fallthrough]];
                 case '*':   // 0 or more repetitions
                     return max_expand( ms, s, p, ep );
 
@@ -914,7 +914,7 @@ struct context
         static_assert( detail::string_traits< PatT >::is_string, "Pattern is not one of the supported string-like types!" );
     }
 
-    bool operator ==( const context< StrCharT, PatCharT >& other ) const noexcept
+    [[nodiscard]] bool operator ==( const context< StrCharT, PatCharT >& other ) const noexcept
     {
         return s.begin == other.s.begin && s.end == other.s.end &&
                p.begin == other.p.begin && p.end == other.p.end;
@@ -997,12 +997,12 @@ struct gmatch_iterator
         return *this;
     }
 
-    bool operator ==( const gmatch_iterator & other ) const noexcept
+    [[nodiscard]] bool operator ==( const gmatch_iterator & other ) const noexcept
     {
         return c == other.c && pos == other.pos;
     }
 
-    bool operator !=( const gmatch_iterator & other ) const noexcept
+    [[nodiscard]] bool operator !=( const gmatch_iterator & other ) const noexcept
     {
         return !( *this == other );
     }
@@ -1010,7 +1010,7 @@ struct gmatch_iterator
     /**
      * \brief Dereferences to a match result.
      */
-    const auto & operator *() const noexcept
+    [[nodiscard]] const auto & operator *() const noexcept
     {
         return mr;
     }
@@ -1018,7 +1018,7 @@ struct gmatch_iterator
     /**
      * \brief Returns a pointer to a match result.
      */
-    const auto operator ->() const noexcept
+    [[nodiscard]] const auto operator ->() const noexcept
     {
         return &mr;
     }
@@ -1041,7 +1041,7 @@ private:
  * \see pg::lex::end
  */
 template< typename StrCharT, typename PatCharT >
-auto begin( const context< StrCharT, PatCharT > & c )
+[[nodiscard]] auto begin( const context< StrCharT, PatCharT > & c )
 {
     auto it = gmatch_iterator( c, c.s.begin );
     return ++it;
@@ -1055,7 +1055,7 @@ auto begin( const context< StrCharT, PatCharT > & c )
  * \see pg::lex::gmatch_iterator
  */
 template< typename StrCharT, typename PatCharT >
-auto end( const context< StrCharT, PatCharT > & c ) noexcept
+[[nodiscard]] auto end( const context< StrCharT, PatCharT > & c ) noexcept
 {
     return gmatch_iterator( c, c.s.end + 1 );
 }
@@ -1066,7 +1066,7 @@ auto end( const context< StrCharT, PatCharT > & c ) noexcept
  * \return Returns a match result based on the character type of the input string.
  */
 template< typename StrT, typename PatT >
-auto match( StrT&& str, PatT&& pat )
+[[nodiscard]] auto match( StrT&& str, PatT&& pat )
 {
     using str_char_type = typename detail::string_traits< StrT >::char_type;
     using pat_char_type = typename detail::string_traits< PatT >::char_type;
@@ -1089,7 +1089,7 @@ auto match( StrT&& str, PatT&& pat )
  */
 template< typename StrT, typename PatT, typename ReplT,
           typename std::enable_if< detail::string_traits< ReplT >::is_string, int >::type = 0 >
-auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
+[[nodiscard]] auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
 {
     static_assert( detail::string_traits< ReplT >::is_string, "Replacement pattern is not one of the supported string-like types!" );
 
@@ -1181,7 +1181,7 @@ auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
  */
 template< typename StrT, typename PatT, typename Function,
           typename std::enable_if< !detail::string_traits< Function >::is_string, int >::type = 0 >
-auto gsub( StrT&& str, PatT&& pat, Function&& func, int count = -1 )
+[[nodiscard]] auto gsub( StrT&& str, PatT&& pat, Function&& func, int count = -1 )
 {
     using str_char_type = typename detail::string_traits< StrT >::char_type;
     using pat_char_type = typename detail::string_traits< PatT >::char_type;
