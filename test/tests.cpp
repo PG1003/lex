@@ -8,7 +8,7 @@
 #include <numeric>
 #include <vector>
 
-#include "lex.h"
+#include <lex.h>
 
 
 using namespace pg;
@@ -469,7 +469,7 @@ static void exceptions()
     {
         try
         {
-            (void)lex::gsub( str, pat, repl );
+            [[maybe_unused]] auto result = lex::gsub( str, pat, repl );
         }
         catch( const lex::lex_error& e )
         {
@@ -488,7 +488,7 @@ static void exceptions()
     try
     {
         auto mr = lex::match( "foo", "..." );
-        (void)mr.at( 1 );
+        [[maybe_unused]] auto match =  mr.at( 1 );
         assert_true( 0 );
     }
     catch( const lex::lex_error& e )
