@@ -736,7 +736,7 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
                 break;
             }
 
-        // Fallthrough
+        [[fallthrough]]
         default:  // Pattern class plus optional suffix
         dflt:
         {
@@ -765,7 +765,7 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
 
                 case '+':   // 1 or more repetitions
                     ++s;    // 1 match already done
-                    // Fallthrough
+                [[fallthrough]]
                 case '*':   // 0 or more repetitions
                     return max_expand( ms, s, p, ep );
 
