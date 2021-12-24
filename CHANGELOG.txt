@@ -1,9 +1,15 @@
+# v1.x.y
+- Added [[fallthrough]], [[nodiscard]] and [[unlikely]] attributes to
+  ensure code correctness and to provide compiler hints for optimazation.
+
 # v1.1.0
 - Added support for char8_t when compiling with C++20.
 
 # v1.0.1
 
-- Reduced the size of a match result object by optimizing it for patterns with up to 2 captures.
+- Reduced the size of a match result object by optimizing it for patterns
+  with up to 2 captures. Patterns with more than 2 captures will allocate
+  memory on the heap.
 
 # v1.0.0
 
