@@ -33,6 +33,14 @@
 #include <type_traits>
 #include <memory>
 
+#ifdef __has_cpp_attribute
+# if __has_cpp_attribute( unlikely )
+#  define PG_LEX_UNLIKELY [[unlikely]]
+# endif
+#endif
+#ifndef PG_LEX_UNLIKELY
+# define PG_LEX_UNLIKELY
+#endif
 
 // Maximum recursion depth for 'match'
 #if !defined(MAXCCALLS)
@@ -300,7 +308,7 @@ public:
      */
     [[nodiscard]] std::basic_string_view< CharT > at( size_t i ) const
     {
-        if( static_cast< int >( i ) >= level )
+        if( static_cast< int >( i ) >= level ) PG_LEX_UNLIKELY
         {
             throw lex_error( capture_out_of_range );
         }
@@ -369,7 +377,7 @@ struct match_state
 
     void check_captures() const
     {
-        if( std::any_of( captures.data(), captures.data() + level, []( const auto & cap ){ return cap.is_unfinished(); } ) )
+        if( std::any_of( captures.data(), captures.data() + level, []( const auto & cap ){ return cap.is_unfinished(); } ) ) PG_LEX_UNLIKELY
         {
             throw lex_error( capture_not_finished );
         }
@@ -411,7 +419,7 @@ const PatCharT * classend( const match_state< StrCharT, PatCharT > & ms, const P
         }
         do  // Look for a ']'
         {
-            if( p == ms.p_end )
+            if( p == ms.p_end ) PG_LEX_UNLIKELY
             {
                 throw lex_error( pattern_missing_closing_bracket );
             }
@@ -505,7 +513,7 @@ const StrCharT * matchbalance( const match_state< StrCharT, PatCharT > & ms, con
 {
     using uchar_t = typename common_unsigned_char< StrCharT, PatCharT >::type;
 
-    if( p >= ms.p_end )
+    if( p >= ms.p_end ) PG_LEX_UNLIKELY
     {
         throw lex_error( balanced_no_arguments );
     }
@@ -584,7 +592,7 @@ const StrCharT * min_expand( match_state< StrCharT, PatCharT > & ms, const StrCh
 template< typename StrCharT, typename PatCharT >
 auto start_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p )
 {
-    if( ms.level >= MAXCAPTURES )
+    if( ms.level >= MAXCAPTURES ) PG_LEX_UNLIKELY
     {
         throw lex_error( capture_too_many );
     }
@@ -645,7 +653,7 @@ const StrCharT * match_capture( match_state< StrCharT, PatCharT > & ms, const St
     const int i = c - '1';
 
     if( i < 0 || i >= ms.level ||
-        ms.captures[ i ].is_unfinished() )
+        ms.captures[ i ].is_unfinished() ) PG_LEX_UNLIKELY
     {
         throw lex_error( capture_invalid_index );
     }
@@ -708,7 +716,7 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
 
             case 'f':  // Frontier?
                 p += 2;
-                if( *p != '[' )
+                if( *p != '[' ) PG_LEX_UNLIKELY
                 {
                     throw lex_error( frontier_no_open_bracket );
                 }
@@ -1138,7 +1146,7 @@ template< typename StrT, typename PatT, typename ReplT,
             else if( std::isdigit( cap_char ) )  // %n
             {
                 const auto cap_index = static_cast< size_t >( cap_char - '1' );
-                if( cap_index >= mr.size() )
+                if( cap_index >= mr.size() ) PG_LEX_UNLIKELY
                 {
                     throw lex_error( capture_invalid_index );
                 }
