@@ -126,7 +126,7 @@ struct captures
     }
 
     captures( captures && other ) noexcept
-        : local( other.local )
+        : local{ other.local[ 0 ], other.local[ 1 ] }
         , alloc( std::move( other.alloc ) )
     {}
 
@@ -1071,7 +1071,7 @@ template< typename StrT, typename PatT >
 
     do
     {
-        auto const e = detail::match( ms, pos, c.p.begin );
+        auto e = detail::match( ms, pos, c.p.begin );
         if( e )
         {
             ms.check_captures();
