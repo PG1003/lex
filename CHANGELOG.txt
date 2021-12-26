@@ -1,6 +1,8 @@
 # v1.x.y
 - Added [[fallthrough]], [[nodiscard]] and [[unlikely]] attributes to
   ensure code correctness and to provide compiler hints for optimazation.
+- Removed the match_mode argument for the gmatch_iterator contructor.
+  This argument was undocumented and only intended for use in the library.
 
 # v1.1.0
 - Added support for char8_t when compiling with C++20.

@@ -948,15 +948,8 @@ context< typename detail::string_traits< StrT >::char_type,
 template< typename StrCharT, typename PatCharT >
 struct gmatch_iterator
 {
-    enum match_mode : int
-    {
-        global, /**< Ignore '^' at the start of pattern. */
-        exact   /**< Match pattern exactly. */
-    };
-
-    gmatch_iterator( const context< StrCharT, PatCharT >& ctx, const StrCharT * start, match_mode mode = global ) noexcept
-        : mm( mode )
-        , c( ctx )
+    gmatch_iterator( const context< StrCharT, PatCharT > & ctx, const StrCharT * start ) noexcept
+        : c( ctx )
         , pos( start )
     {}
 
@@ -975,6 +968,7 @@ struct gmatch_iterator
             if( !e || e == last_match )
             {
                 ++pos;
+                ms.reprepstate();
             }
             else
             {
@@ -991,15 +985,8 @@ struct gmatch_iterator
 
                 return *this;
             }
+
             last_match = e;
-
-            ms.reprepstate();
-
-            if( mm == exact && c.p.anchor )
-            {
-                pos = c.s.end + 1; // Seek to the end iterator position.
-                break;
-            }
         }
 
         return *this;
@@ -1032,7 +1019,6 @@ struct gmatch_iterator
     }
 
 private:
-    const match_mode                    mm         = match_mode::global;
     const context< StrCharT, PatCharT > c;
     const StrCharT *                    pos        = nullptr;
     const StrCharT *                    last_match = nullptr;
@@ -1077,12 +1063,37 @@ template< typename StrT, typename PatT >
 [[nodiscard]] auto match( StrT&& str, PatT&& pat )
 {
     using str_char_type = typename detail::string_traits< StrT >::char_type;
-    using pat_char_type = typename detail::string_traits< PatT >::char_type;
-    using iterator_type = gmatch_iterator< str_char_type, pat_char_type >;
 
-    const context c  = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
-    auto          it = iterator_type( c, c.s.begin, iterator_type::exact );
-    return *( ++it );
+    basic_match_result< str_char_type > mr;
+    const context                       c   = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
+    detail::match_state                 ms  = { c.s.begin, c.s.end, c.p.end, mr };
+    const str_char_type *               pos = c.s.begin;
+
+    do
+    {
+        auto const e = detail::match( ms, pos, c.p.begin );
+        if( e )
+        {
+            ms.check_captures();
+            ms.pos = { static_cast< int >( pos - c.s.begin ), static_cast< int >( e - c.s.begin ) };
+            if( ms.level == 0 )
+            {
+                ms.captures[ ms.level ].init( pos );
+                ms.captures[ ms.level ].len( static_cast< int >( e - pos ) );
+                ++ms.level;
+            }
+
+            return mr;
+        }
+        else
+        {
+            ++pos;
+            ms.check_captures();
+        }
+    }
+    while( pos <= c.s.end && !c.p.anchor );
+
+    return mr;
 }
 
 /**
@@ -1108,7 +1119,7 @@ template< typename StrT, typename PatT, typename ReplT,
 
     const detail::string_context< repl_char_type > r            = { std::forward< ReplT >( repl ) };
     const context                                  c            = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
-    auto                                           match_it     = iterator_type( c, c.s.begin, iterator_type::exact );
+    auto                                           match_it     = iterator_type( c, c.s.begin );
     const auto                                     match_end_it = end( c );
 
     std::basic_string< str_char_type > result;
@@ -1196,7 +1207,7 @@ template< typename StrT, typename PatT, typename Function,
     using iterator_type = gmatch_iterator< str_char_type, pat_char_type >;
 
     const context c            = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
-    auto          match_it     = iterator_type( c, c.s.begin, iterator_type::exact );
+    auto          match_it     = iterator_type( c, c.s.begin );
     const auto    match_end_it = end( c );
 
     std::basic_string< str_char_type > result;
