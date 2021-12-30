@@ -985,8 +985,6 @@ struct gmatch_iterator
 
                 return *this;
             }
-
-            last_match = e;
         }
 
         return *this;
