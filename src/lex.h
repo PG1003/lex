@@ -455,15 +455,15 @@ bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) no
         if( *p == '%' )
         {
             p++;
-            if( match_class( uc, *p ) )
+            if( match_class( c, *p ) )
             {
                 return ret;
             }
         }
         else if( ( *( p + 1 ) == '-' ) && ( p + 2 < ep ) )
         {
+            const auto min = static_cast< uchar_t >( *p );
             p += 2;
-            const auto min = static_cast< uchar_t >( *( p - 2 ) );
             const auto max = static_cast< uchar_t >( *p );
             if( min <= uc && uc <= max )
             {
@@ -494,7 +494,7 @@ bool singlematch( const match_state< StrCharT, PatCharT > & ms, const StrCharT *
             return true;  // Matches any char
 
         case '%':
-            return match_class( static_cast< uchar_t >( c ), *( p + 1 ) );
+            return match_class( c, *( p + 1 ) );
 
         case '[':
             return matchbracketclass( c, p, ep - 1 );
