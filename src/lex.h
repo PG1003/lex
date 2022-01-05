@@ -406,7 +406,7 @@ const PatCharT * classend( const match_state< StrCharT, PatCharT > & ms, const P
     switch( *p++ )
     {
     case '%':
-        if( p == ms.p_end )
+        if( p == ms.p_end ) PG_LEX_UNLIKELY
         {
             throw lex_error( pattern_ends_with_percent );
         }
