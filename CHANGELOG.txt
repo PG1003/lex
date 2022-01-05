@@ -1,4 +1,4 @@
-# v1.x.y
+# v1.1.1
 - Added [[fallthrough]], [[nodiscard]] and [[unlikely]] attributes to
   ensure code correctness and to provide compiler hints for optimazation.
 - Removed the match_mode argument for the gmatch_iterator contructor.
