@@ -52,7 +52,7 @@ template struct pg::lex::detail::pattern_context< char32_t >;
 pg::lex::detail::matchdepth_sentinel::matchdepth_sentinel( int & counter )
     : m_counter( counter )
 {
-    if( --m_counter < 0 )
+    if( --m_counter < 0 ) PG_LEX_UNLIKELY
     {
         throw lex_error( pattern_too_complex );
     }
