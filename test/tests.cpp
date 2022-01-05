@@ -780,17 +780,14 @@ int main( int /* argc */, char * /* argv */[] )
 {
     try
     {
-//        for( int i = 0 ; i < 10000 ; ++i )
-        {
-            match();
-            gmatch();
-            gsub();
-            exceptions();
-            results();
-            string_types();
-            string_traits();
-            readme_examples();
-        }
+        match();
+        gmatch();
+        gsub();
+        exceptions();
+        results();
+        string_types();
+        string_traits();
+        readme_examples();
 
         std::cout << "Total tests: " << total_checks << ", Tests failed: " << failed_checks << '\n';
 
