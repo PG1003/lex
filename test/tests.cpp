@@ -10,6 +10,7 @@
 
 #include <lex.h>
 
+#define ENABLE 1
 
 using namespace pg;
 using namespace std::literals;
@@ -17,19 +18,26 @@ using namespace std::literals;
 static int total_checks  = 0;
 static int failed_checks = 0;
 
-static bool report_failed_check( const char* const file, const int line, const char * const condition )
+static bool report_failed_check( const char * const expected, const char * const file, const int line, const char * const condition )
 {
-    std::cout << "check failed! (file " << file << ", line " << line << "): " << condition << '\n';
+    std::cout << expected << ": (file " << file << ", line " << line << "): " << condition << '\n';
     ++failed_checks;
     return false;
 }
 
-#define assert_true( c ) do { ++total_checks; ( c ) || report_failed_check( __FILE__, __LINE__, #c ); } while( false );
-#define assert_false( c ) do { ++total_checks; !( c ) || report_failed_check( __FILE__, __LINE__, #c ); } while( false );
+static bool report_exception( const char * const exception, const char* const file, const int line, const char * const condition )
+{
+    std::cout << "Exception: '" << exception << "' (file " << file << ", line " << line << "): " << condition << '\n';
+    ++failed_checks;
+    return false;
+}
 
+#define assert_true( c ) do { ++total_checks; try { ( c ) || report_failed_check( "Expected 'true'", __FILE__, __LINE__, #c ); } catch( const pg::lex::lex_error & e ){ report_exception( e.what(), __FILE__, __LINE__, #c ); } } while( false );
+#define assert_false( c ) do { ++total_checks; try { !( c ) || report_failed_check( "Expected 'false'", __FILE__, __LINE__, #c ); } catch( const pg::lex::lex_error & e ){ report_exception( e.what(), __FILE__, __LINE__, #c ); } } while( false );
 
 static void match()
 {
+#if ENABLE
     {
         assert_true( lex::match( "aaab", ".*b" ).at( 0 ) == "aaab" );
         assert_true( lex::match( "aaa", ".*a" ).at( 0 ) == "aaa" );
@@ -183,10 +191,12 @@ static void match()
         assert_true( lex::match( "abc\0\0\0"sv, "%\0+"sv ).at( 0 ) == "\0\0\0"sv );
         assert_true( lex::match( "abc\0\0\0"sv, "%\0%\0?"sv ).at( 0 ) == "\0\0"sv );
     }
+#endif
 }
 
 static void gmatch()
 {
+#if ENABLE
     {
         int i = 0;
         for( auto& mr : lex::context( "abcde", "()" ) )
@@ -210,7 +220,6 @@ static void gmatch()
         assert_true( v[ 1 ] == "second" );
         assert_true( v[ 2 ] == "word" );
     }
-
     {
         std::vector< int > v = { 2, 5, 8 };
         std::string str      = "xuxx uu ppar r";
@@ -225,7 +234,6 @@ static void gmatch()
         }
         assert_true( v.size() == 0 );
     }
-
     {
         int i = 0;
         for( auto& mr : lex::context( "13 14 10 = 11, 15= 16, 22=23", "(%d+)%s*=%s*(%d+)" ) )
@@ -290,10 +298,12 @@ static void gmatch()
         auto it_4_end   = lex::end( c_4 );
         assert_true( it_4_begin != it_4_end );
     }
+#endif
 }
 
 static void gsub()
 {
+#if ENABLE
     {
         auto result = lex::gsub( "hello world", "(%w+)", "%1 %1" );
         assert_true( result == "hello hello world world" );
@@ -433,10 +443,12 @@ static void gsub()
         auto result = lex::gsub( "trocar tudo em |teste|b| é |beleza|al|", "|([^|]*)|([^|]*)|", f );
         assert_true( result == "trocar tudo em bbbbb é alalalalalal" );
     }
+#endif
 }
 
 static void exceptions()
 {
+#if ENABLE
     const auto malform = []( auto pat, lex::error_type ec ) -> bool
     {
         try
@@ -459,7 +471,7 @@ static void exceptions()
     assert_true( malform( "[]", lex::pattern_missing_closing_bracket ) );
     assert_true( malform( "[^]", lex::pattern_missing_closing_bracket ) );
     assert_true( malform( "[a%]", lex::pattern_missing_closing_bracket ) );
-    assert_true( malform( "[a%", lex::pattern_missing_closing_bracket ) );
+    assert_true( malform( "[a%", lex::pattern_ends_with_percent ) );
     assert_true( malform( "%b", lex::balanced_no_arguments ) );
     assert_true( malform( "%ba", lex::balanced_no_arguments ) );
     assert_true( malform( "%", lex::pattern_ends_with_percent ) );
@@ -495,10 +507,12 @@ static void exceptions()
     {
         assert_true( e.code() == lex::capture_out_of_range );
     }
+#endif
 }
 
 static void results()
 {
+#if ENABLE
     {
         int i = 0;
         for( auto& mr : lex::context( "13 14 10 = 11, 15= 16, 22=23", "(%d+)%s*=%s*(%d+)" ) )
@@ -523,10 +537,12 @@ static void results()
         }
         assert_true( i == 3 );
     }
+#endif
 }
 
 static void string_types()
 {
+#if ENABLE
     const char * const     str   = "aaab";
     const char * const     pat   = ".*b";
     const wchar_t * const  wstr  = L"aaab";
@@ -605,10 +621,12 @@ static void string_types()
 #endif
     assert_true( lex::match( u"aaab"sv, ".*b" ) );
     assert_true( lex::match( U"aaab"sv, U".*b" ) );
+#endif
 }
 
 static void string_traits()
 {
+#if ENABLE
     assert_true( ( std::is_same< lex::detail::string_traits< char * >::char_type, char >::value ) );
     assert_true( ( std::is_same< lex::detail::string_traits< const char * >::char_type, char >::value ) );
     assert_true( ( std::is_same< lex::detail::string_traits< char [] >::char_type, char >::value ) );
@@ -692,10 +710,12 @@ static void string_traits()
     assert_true( ( std::is_same< lex::detail::string_traits< std::u32string_view & >::char_type, char32_t >::value ) );
     assert_true( ( std::is_same< lex::detail::string_traits< const std::u32string_view >::char_type, char32_t >::value ) );
     assert_true( ( std::is_same< lex::detail::string_traits< const std::u32string_view & >::char_type, char32_t >::value ) );
+#endif
 }
 
 static void readme_examples()
 {
+#if ENABLE
     {
         std::string str = "Hello world!";
         auto result = lex::match( str, "^%a+" );
@@ -774,6 +794,7 @@ static void readme_examples()
 
         assert_true( std::equal( expected.cbegin(), expected.cend(), results.cbegin(), results.cend() ) );
     }
+#endif
 }
 
 int main( int /* argc */, char * /* argv */[] )
