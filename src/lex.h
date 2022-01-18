@@ -349,6 +349,8 @@ using u32match_result = basic_match_result< char32_t >;
 
 namespace detail
 {
+template< typename StrCharT >
+using pos_result = std::pair< const StrCharT *, bool >;
 
 template< typename StrCharT, typename PatCharT >
 using common_unsigned_char = typename std::make_unsigned< typename std::common_type< StrCharT, PatCharT >::type >;
@@ -401,110 +403,133 @@ bool match_class( int c, int cl ) noexcept;
 
 
 template< typename StrCharT, typename PatCharT >
-const PatCharT * classend( const match_state< StrCharT, PatCharT > & ms, const PatCharT * p )
+const PatCharT * find_bracket_class_end( const match_state< StrCharT, PatCharT > & ms, const PatCharT * p )
 {
-    switch( *p++ )
+    do
     {
-    case '%':
         if( p == ms.p_end ) PG_LEX_UNLIKELY
         {
-            throw lex_error( pattern_ends_with_percent );
+            throw lex_error( pattern_missing_closing_bracket );
         }
-        return p + 1;
-
-    case '[':
-        if( *p == '^' )
+        else if( *p == '%' )
         {
-            ++p;
-        }
-        do  // Look for a ']'
-        {
-            if( p == ms.p_end ) PG_LEX_UNLIKELY
+            if( ++p == ms.p_end ) PG_LEX_UNLIKELY  // Skip escapes (e.g. '%]')
+            {
+                throw lex_error( pattern_ends_with_percent );
+            }
+            if( ++p == ms.p_end ) PG_LEX_UNLIKELY
             {
                 throw lex_error( pattern_missing_closing_bracket );
             }
-            if( *p++ == '%' && p < ms.p_end )
-            {
-                ++p;  // Skip escapes (e.g. '%]')
-            }
-        } while( *p != ']' );
-
-        return p + 1;
-
-    default:
-        return p;
+        }
     }
+    while( *p++ != ']' );
+
+    return p;
 }
 
-
 template< typename StrCharT, typename PatCharT >
-bool matchbracketclass( StrCharT c, const PatCharT * p, const PatCharT * ep ) noexcept
+auto matchbracketclass( const match_state< StrCharT, PatCharT > & ms, const StrCharT c, const PatCharT * p ) -> pos_result< PatCharT >
 {
     using uchar_t = typename common_unsigned_char< StrCharT, PatCharT >::type;
 
     const auto uc = static_cast< uchar_t >( c );
 
     bool ret = true;
-    if( *( p + 1 ) == '^' )
+    if( *( ++p ) == '^' )
     {
         ret = false;
-        p++;  // Skip the '^'
+        ++p;    // Skip the '^'
     }
-    while( ++p < ep )
+
+    do
     {
+        if( p == ms.p_end ) PG_LEX_UNLIKELY
+        {
+            throw lex_error( pattern_missing_closing_bracket );
+        }
+
         if( *p == '%' )
         {
-            p++;
+            ++p;    // Skip escapes (e.g. '%]')
+            if( p == ms.p_end ) PG_LEX_UNLIKELY
+            {
+                throw lex_error( pattern_ends_with_percent );
+            }
             if( match_class( uc, *p ) )
             {
-                return ret;
+                return { p + 1, ret };
             }
         }
-        else if( ( *( p + 1 ) == '-' ) && ( p + 2 < ep ) )
+        else if( auto ec = p + 2 ; *( p + 1 ) == '-' && ec < ms.p_end && *ec != ']' )
         {
             const auto min = static_cast< uchar_t >( *p );
-            p += 2;
-            const auto max = static_cast< uchar_t >( *p );
+            const auto max = static_cast< uchar_t >( *ec );
             if( min <= uc && uc <= max )
             {
-                return ret;
+                return { ec + 1, ret };
             }
+            p = ec;
         }
         else if( static_cast< uchar_t >( *p ) == uc )
         {
-            return ret;
+            return { p + 1, ret };
         }
+
+        ++p;
     }
-    return !ret;
+    while( *p != ']' );
+
+    return { p, !ret };
 }
 
 
 template< typename StrCharT, typename PatCharT >
-bool singlematch( const match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep ) noexcept
+auto single_match_pr( const match_state< StrCharT, PatCharT > & ms,  const StrCharT * s, const PatCharT * p ) -> pos_result< PatCharT >
 {
     using uchar_t = typename common_unsigned_char< StrCharT, PatCharT >::type;
 
-    if( s < ms.s_end )
+    const bool s_end = s < ms.s_end;
+
+    switch( *p )
     {
-        const auto c = *s;
+    case '.':
+        return { p + 1, s_end }; // Matches any char
 
-        switch( *p )
-        {
-        case '.':
-            return true;  // Matches any char
+    case '%':
+        return { p + 2, s_end && match_class( static_cast< uchar_t >( *s ), *( p + 1 ) ) };
 
-        case '%':
-            return match_class( static_cast< uchar_t >( c ), *( p + 1 ) );
-
-        case '[':
-            return matchbracketclass( c, p, ep - 1 );
-
-        default:
-            return static_cast< uchar_t >( *p ) == static_cast< uchar_t >( c );
-        }
+    case '[':
+    {
+        auto [ ep, res ] = matchbracketclass( ms, *s, p );
+        return { find_bracket_class_end( ms, ep ), res };
     }
 
-    return false;
+    default:
+        return { p + 1, s_end && static_cast< uchar_t >( *s ) == static_cast< uchar_t >( *p ) };
+    }
+}
+
+
+template< typename StrCharT, typename PatCharT >
+bool single_match( const match_state< StrCharT, PatCharT > & ms, StrCharT c, const PatCharT * p )
+{
+    using uchar_t = typename common_unsigned_char< StrCharT, PatCharT >::type;
+
+    switch( *p )
+    {
+    case '.':
+        return true; // Matches any char
+
+    case '%':
+        return match_class( static_cast< uchar_t >( c ), *( p + 1 ) );
+
+    case '[':
+        return matchbracketclass( ms, c, p ).second;
+
+    default:
+        return static_cast< uchar_t >( *p ) == static_cast< uchar_t >( c );
+    }
 }
 
 
@@ -550,7 +575,7 @@ template< typename StrCharT, typename PatCharT >
 const StrCharT * max_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep )
 {
     ptrdiff_t i = 0;
-    while( singlematch( ms, s + i, p, ep ) )
+    while( ( s + i ) < ms.s_end && single_match( ms, *( s + i ), p ) )
     {
         ++i;
     }
@@ -577,7 +602,7 @@ const StrCharT * min_expand( match_state< StrCharT, PatCharT > & ms, const StrCh
         {
             return res;
         }
-        else if( singlematch( ms, s, p, ep ) )
+        else if( s != ms.s_end && single_match( ms, *s, p ) )
         {
             ++s;
         }
@@ -609,7 +634,7 @@ auto start_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, 
         ms.captures[ ms.level ].mark_unfinished();
     }
 
-    ms.level++;
+    ++ms.level;
 
     auto res = match( ms, s, p );
     if( !res )
@@ -676,12 +701,7 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
 {
     const matchdepth_sentinel mds( ms.matchdepth );
 
-    init: // Using gotos to optimize tail recursion
-    if( p == ms.p_end )
-    {
-        return s;
-    }
-    else
+    while( p!= ms.p_end )
     {
         switch( *p )
         {
@@ -694,13 +714,9 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
         case '$':
             if( ( p + 1 ) != ms.p_end )  // Is the '$' the last char in pattern?
             {
-                goto dflt;  // No; go to default
+                break;
             }
-            if( s == ms.s_end )
-            {
-                return s;  // Check end of string
-            }
-            break;
+            return s == ms.s_end ? s : nullptr;
 
         case '%':  // Escaped sequences not in the format class[*+?-]?
             switch( *( p + 1 ) )
@@ -710,7 +726,7 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
                 {
                     s  = res;
                     p += 4;
-                    goto init;  // Return match( ms, s, p + 4 )
+                    continue;
                 }
                 return nullptr;
 
@@ -720,15 +736,14 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
                 {
                     throw lex_error( frontier_no_open_bracket );
                 }
-                else
+                else if( matchbracketclass( ms, *s, p ).second )
                 {
-                    const PatCharT * ep       = classend( ms, p );  // Points to what is next
-                    auto             previous = ( s == ms.s_begin ) ? '\0' : *( s - 1 );
-                    if( !matchbracketclass( previous, p, ep - 1 ) &&
-                         matchbracketclass( *s, p, ep - 1 ) )
+                    const StrCharT previous = ( s == ms.s_begin ) ? '\0' : *( s - 1 );
+                    if( auto [ ep, res ] = matchbracketclass( ms, previous, p ) ; !res )
                     {
-                        p = ep;
-                        goto init;  // Return match( ms, s, ep )
+                        assert( *ep == ']' );
+                        p = ep + 1;
+                        continue;
                     }
                 }
                 return nullptr;
@@ -739,59 +754,47 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
                 {
                     s  = res;
                     p += 2;
-                    goto init;  // Return match( ms, s, p + 2 )
+                    continue;
                 }
-                break;
-            }
-
-        [[fallthrough]];
-        default:  // Pattern class plus optional suffix
-        dflt:
-        {
-            const PatCharT * ep = classend( ms, p );  // Points to optional suffix
-            if( !singlematch( ms, s, p, ep ) )
-            {
-                if( *ep == '*' || *ep == '?' || *ep == '-' )  // Accept empty?
-                {
-                    p = ep + 1;
-                    goto init;  // Return match( ms, s, ep + 1 )
-                }
-                // '+' or no suffix
                 return nullptr;
             }
-            else  // Matched once
+        }
+
+        const auto [ ep, r ] = single_match_pr( ms, s, p );
+        if( r )
+        {
+            switch( *ep )  // Handle optional suffix
             {
-                switch( *ep )  // Handle optional suffix
+            case '+':   // 1 or more repetitions
+                ++s;    // 1 match already done
+            [[fallthrough]];
+            case '*':   // 0 or more repetitions
+                return max_expand( ms, s, p, ep );
+
+            case '-':   // 0 or more repetitions (minimum)
+                return min_expand( ms, s, p, ep );
+
+            default:    // No suffix
+                p = ep;
+                ++s;
+                continue;
+
+            case '?':  // Optional
+                if( auto res = match( ms, s + 1, ep + 1 ) )
                 {
-                case '?':  // Optional
-                    if( auto res = match( ms, s + 1, ep + 1 ) )
-                    {
-                        return res;
-                    }
-                    p = ep + 1;
-                    goto init;  // Else return match( ms, s, ep + 1 )
-
-                case '+':   // 1 or more repetitions
-                    ++s;    // 1 match already done
-                [[fallthrough]];
-                case '*':   // 0 or more repetitions
-                    return max_expand( ms, s, p, ep );
-
-                case '-':   // 0 or more repetitions (minimum)
-                    return min_expand( ms, s, p, ep );
-
-                default:    // No suffix
-                    p = ep;
-                    ++s;
-                    goto init;  // Return match( ms, s + 1, ep )
+                    return res;
                 }
             }
-            break;
         }
+        else if( *ep != '*' && *ep != '?' && *ep != '-' )  // Accept empty?
+        {
+            return nullptr;
         }
+
+        p = ep + 1;
     }
 
-    return nullptr;
+    return s;
 }
 
 
