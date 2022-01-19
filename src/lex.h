@@ -349,6 +349,7 @@ using u32match_result = basic_match_result< char32_t >;
 
 namespace detail
 {
+
 template< typename StrCharT >
 using pos_result = std::pair< const StrCharT *, bool >;
 
@@ -397,13 +398,13 @@ struct match_state
 
 
 template< typename StrCharT, typename PatCharT >
-const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p );
+auto match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p ) -> pos_result< StrCharT >;
 
 bool match_class( int c, int cl ) noexcept;
 
 
 template< typename StrCharT, typename PatCharT >
-const PatCharT * find_bracket_class_end( const match_state< StrCharT, PatCharT > & ms, const PatCharT * p )
+auto find_bracket_class_end( const match_state< StrCharT, PatCharT > & ms, const PatCharT * p )
 {
     do
     {
@@ -572,7 +573,7 @@ const StrCharT * matchbalance( const match_state< StrCharT, PatCharT > & ms, con
 
 
 template< typename StrCharT, typename PatCharT >
-const StrCharT * max_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep )
+auto max_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep ) -> pos_result< StrCharT >
 {
     ptrdiff_t i = 0;
     while( ( s + i ) < ms.s_end && single_match( ms, *( s + i ), p ) )
@@ -582,23 +583,23 @@ const StrCharT * max_expand( match_state< StrCharT, PatCharT > & ms, const StrCh
     // Keeps trying to match with the maximum repetitions
     while( i >= 0 )
     {
-        if( auto res = match( ms, s + i, ep + 1 ) )
+        if( auto res = match( ms, s + i, ep + 1 ) ; res.second )
         {
             return res;
         }
         --i;
     }
 
-    return nullptr;
+    return { s, false };
 }
 
 
 template< typename StrCharT, typename PatCharT >
-const StrCharT * min_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep )
+auto min_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep ) -> pos_result< StrCharT >
 {
     for( ; ; )
     {
-        if( auto res = match( ms, s, ep + 1 )  )
+        if( auto res = match( ms, s, ep + 1 ) ; res.second  )
         {
             return res;
         }
@@ -608,7 +609,7 @@ const StrCharT * min_expand( match_state< StrCharT, PatCharT > & ms, const StrCh
         }
         else
         {
-            return nullptr;
+            return { s, false };
         }
     }
 }
@@ -637,7 +638,7 @@ auto start_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, 
     ++ms.level;
 
     auto res = match( ms, s, p );
-    if( !res )
+    if( !res.second )
     {
         // Undo capture when the match has failed
         --ms.level;
@@ -648,7 +649,7 @@ auto start_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, 
 
 
 template< typename StrCharT, typename PatCharT >
-auto end_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p )
+auto end_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p ) -> pos_result< StrCharT >
 {
     int i = ms.level;
     for( --i ; i >= 0 ; --i )
@@ -659,7 +660,7 @@ auto end_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, co
             cap.len( static_cast< int >( s - cap.init() ) );
 
             auto res = match( ms, s, p );
-            if( !res )
+            if( !res.second )
             {
                 // Undo capture when the match has failed
                 cap.mark_unfinished();
@@ -673,7 +674,7 @@ auto end_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, co
 
 
 template< typename StrCharT, typename PatCharT >
-const StrCharT * match_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, PatCharT c )
+auto match_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, PatCharT c ) -> pos_result< StrCharT >
 {
     const int i = c - '1';
 
@@ -689,15 +690,15 @@ const StrCharT * match_capture( match_state< StrCharT, PatCharT > & ms, const St
     if( ( ms.s_end - s ) >= len &&
         std::equal( c_begin, c_end, s ) )
     {
-        return s + len;
+        return { s + len, true };
     }
 
-    return nullptr;
+    return { s, false };
 }
 
 
 template< typename StrCharT, typename PatCharT >
-const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p )
+auto match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p ) -> pos_result< StrCharT >
 {
     const matchdepth_sentinel mds( ms.matchdepth );
 
@@ -716,7 +717,7 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
             {
                 break;
             }
-            return s == ms.s_end ? s : nullptr;
+            return { s, s == ms.s_end };
 
         case '%':  // Escaped sequences not in the format class[*+?-]?
             switch( *( p + 1 ) )
@@ -728,7 +729,7 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
                     p += 4;
                     continue;
                 }
-                return nullptr;
+                return { s, false };
 
             case 'f':  // Frontier?
                 p += 2;
@@ -736,7 +737,8 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
                 {
                     throw lex_error( frontier_no_open_bracket );
                 }
-                else if( matchbracketclass( ms, *s, p ).second )
+                else
+                if( matchbracketclass( ms, *s, p ).second )
                 {
                     const StrCharT previous = ( s == ms.s_begin ) ? '\0' : *( s - 1 );
                     if( auto [ ep, res ] = matchbracketclass( ms, previous, p ) ; !res )
@@ -746,17 +748,17 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
                         continue;
                     }
                 }
-                return nullptr;
+                return { s, false };
 
             case '0': case '1': case '2': case '3': case '4':
             case '5': case '6': case '7': case '8': case '9':  // Capture results (%0-%9)?
-                if( auto res = match_capture( ms, s, *( p + 1 ) ) )
+                if( auto res = match_capture( ms, s, *( p + 1 ) ) ; res.second )
                 {
-                    s  = res;
+                    s  = res.first;
                     p += 2;
                     continue;
                 }
-                return nullptr;
+                return { s, false };
             }
         }
 
@@ -775,12 +777,14 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
                 return min_expand( ms, s, p, ep );
 
             default:    // No suffix
-                p = ep;
-                ++s;
-                continue;
+                if( auto res = match( ms, s + 1, ep ) ; res.second )
+                {
+                    return res;
+                }
+                return { s, false };
 
             case '?':  // Optional
-                if( auto res = match( ms, s + 1, ep + 1 ) )
+                if( auto res = match( ms, s + 1, ep + 1 ) ; res.second )
                 {
                     return res;
                 }
@@ -788,13 +792,13 @@ const StrCharT * match( match_state< StrCharT, PatCharT > & ms, const StrCharT *
         }
         else if( *ep != '*' && *ep != '?' && *ep != '-' )  // Accept empty?
         {
-            return nullptr;
+            return { s, false };
         }
 
         p = ep + 1;
     }
 
-    return s;
+    return { s, true };
 }
 
 
@@ -967,10 +971,10 @@ struct gmatch_iterator
 
         while( pos <= c.s.end )
         {
-            auto e = detail::match( ms, pos, c.p.begin );
-            if( !e || e == last_match )
+            auto [ e, r ] = detail::match( ms, pos, c.p.begin );
+            if( !r || e == last_match )
             {
-                ++pos;
+                pos = e + 1;
                 ms.reprepstate();
             }
             else
@@ -1014,7 +1018,7 @@ struct gmatch_iterator
     /**
      * \brief Returns a pointer to a match result.
      */
-    [[nodiscard]] const auto operator ->() const noexcept
+    [[nodiscard]] auto operator ->() const noexcept
     {
         return &mr;
     }
@@ -1072,8 +1076,8 @@ template< typename StrT, typename PatT >
 
     do
     {
-        auto e = detail::match( ms, pos, c.p.begin );
-        if( e )
+        auto [ e, r ] = detail::match( ms, pos, c.p.begin );
+        if( r )
         {
             ms.check_captures();
             ms.pos = { static_cast< int >( pos - c.s.begin ), static_cast< int >( e - c.s.begin ) };
@@ -1088,7 +1092,7 @@ template< typename StrT, typename PatT >
         }
         else
         {
-            ++pos;
+            pos = e + 1;
             ms.check_captures();
         }
     }
