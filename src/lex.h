@@ -350,8 +350,8 @@ using u32match_result = basic_match_result< char32_t >;
 namespace detail
 {
 
-template< typename StrCharT >
-using pos_result = std::pair< const StrCharT *, bool >;
+template< typename CharT >
+using pos_result = std::pair< const CharT *, bool >;
 
 template< typename StrCharT, typename PatCharT >
 using common_unsigned_char = typename std::make_unsigned< typename std::common_type< StrCharT, PatCharT >::type >;
@@ -702,7 +702,7 @@ auto match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const Pa
 {
     const matchdepth_sentinel mds( ms.matchdepth );
 
-    while( p!= ms.p_end )
+    while( p != ms.p_end )
     {
         switch( *p )
         {
@@ -803,7 +803,7 @@ auto match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const Pa
 
 
 template< typename CharT >
-void append_number( std::basic_string< CharT >& str, ptrdiff_t number )
+void append_number( std::basic_string< CharT >& str, ptrdiff_t number ) noexcept
 {
     assert( number >= 0 );
 
