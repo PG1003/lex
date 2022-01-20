@@ -40,13 +40,13 @@ template struct pg::lex::detail::string_context< char8_t >;
 template struct pg::lex::detail::string_context< char16_t >;
 template struct pg::lex::detail::string_context< char32_t >;
 
-template struct pg::lex::detail::pattern_context< char >;
-template struct pg::lex::detail::pattern_context< wchar_t >;
+template struct pg::lex::pattern< char >;
+template struct pg::lex::pattern< wchar_t >;
 #if defined( __cpp_lib_char8_t )
-template struct pg::lex::detail::pattern_context< char8_t >;
+template struct pg::lex::pattern< char8_t >;
 #endif
-template struct pg::lex::detail::pattern_context< char16_t >;
-template struct pg::lex::detail::pattern_context< char32_t >;
+template struct pg::lex::pattern< char16_t >;
+template struct pg::lex::pattern< char32_t >;
 
 
 pg::lex::detail::matchdepth_sentinel::matchdepth_sentinel( int & counter )

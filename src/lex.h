@@ -347,6 +347,7 @@ using u8match_result  = basic_match_result< char8_t >;
 using u16match_result = basic_match_result< char16_t >;
 using u32match_result = basic_match_result< char32_t >;
 
+
 namespace detail
 {
 
@@ -814,6 +815,7 @@ void append_number( std::basic_string< CharT >& str, ptrdiff_t number ) noexcept
     str.append( 1, '0' + ( number % 10 ) );
 }
 
+
 template< typename CharT >
 struct string_context
 {
@@ -853,33 +855,35 @@ extern template struct string_context< char8_t >;
 extern template struct string_context< char16_t >;
 extern template struct string_context< char32_t >;
 
+}
 
-template< typename CharT >
-struct pattern_context
+
+template< typename CharT  >
+struct pattern
 {
-    pattern_context( const CharT * p ) noexcept
-        : pattern_context( p, std::char_traits< CharT >::length( p ) )
+    pattern( const CharT * p ) noexcept
+        : pattern( p, std::char_traits< CharT >::length( p ) )
     {}
 
-    pattern_context( const CharT * p, size_t l ) noexcept
+    pattern( const CharT * p, size_t l ) noexcept
         : end( p + l )
         , anchor( p < end && *p == '^' )
         , begin( anchor ? p + 1 : p )
     {}
 
     template< size_t N >
-    pattern_context( const CharT( & p )[ N ] ) noexcept
-        : pattern_context( p, N )
+    pattern( const CharT( & p )[ N ] ) noexcept
+        : pattern( p, N )
     {}
 
     template< typename Traits, typename Allocator >
-    pattern_context( const std::basic_string< CharT, Traits, Allocator > & s ) noexcept
-        : pattern_context( s.data(), s.size() )
+    pattern( const std::basic_string< CharT, Traits, Allocator > & s ) noexcept
+        : pattern( s.data(), s.size() )
     {}
 
     template< typename Traits >
-    pattern_context( const std::basic_string_view< CharT, Traits > & s ) noexcept
-        : pattern_context( s.data(), s.size() )
+    pattern( const std::basic_string_view< CharT, Traits > & s ) noexcept
+        : pattern( s.data(), s.size() )
     {}
 
     const CharT * const end    = nullptr;
@@ -887,15 +891,14 @@ struct pattern_context
     const CharT * const begin  = nullptr;
 };
 
-extern template struct pattern_context< char >;
-extern template struct pattern_context< wchar_t >;
+extern template struct pattern< char >;
+extern template struct pattern< wchar_t >;
 #if defined( __cpp_lib_char8_t )
-extern template struct pattern_context< char8_t >;
+extern template struct pattern< char8_t >;
 #endif
-extern template struct pattern_context< char16_t >;
-extern template struct pattern_context< char32_t >;
+extern template struct pattern< char16_t >;
+extern template struct pattern< char32_t >;
 
-}
 
 /**
  * \brief A lex context is an input string combined with a pattern.
@@ -917,17 +920,20 @@ extern template struct pattern_context< char32_t >;
 template< typename StrCharT, typename PatCharT >
 struct context
 {
-    const detail::string_context< StrCharT >  s;
-    const detail::pattern_context< PatCharT > p;
+    const detail::string_context< StrCharT > s;
+    const pattern< PatCharT >                p;
 
     template< typename StrT, typename PatT >
-    context( StrT && s_, PatT && p_ ) noexcept
-        : s( std::forward< StrT >( s_ ) )
-        , p( std::forward< PatT >( p_ ) )
-    {
-        static_assert( detail::string_traits< StrT >::is_string, "String is not one of the supported string-like types!" );
-        static_assert( detail::string_traits< PatT >::is_string, "Pattern is not one of the supported string-like types!" );
-    }
+    context( StrT && s, PatT && p ) noexcept
+        : s( std::forward< StrT >( s ) )
+        , p( std::forward< PatT >( p ) )
+    {}
+
+    template< typename StrT, typename PatCharT_ >
+    context( StrT && s, const pattern< PatCharT_ > & p ) noexcept
+        : s( std::forward< StrT >( s ) )
+        , p( p )
+    {}
 
     [[nodiscard]] bool operator ==( const context< StrCharT, PatCharT >& other ) const noexcept
     {
@@ -941,6 +947,11 @@ context( StrT &&, PatT && ) noexcept ->
 context< typename detail::string_traits< StrT >::char_type,
          typename detail::string_traits< PatT >::char_type >;
 
+template< typename StrT, typename PatCharT >
+context( StrT &&, const pattern< PatCharT > & ) noexcept ->
+context< typename detail::string_traits< StrT >::char_type, PatCharT >;
+
+
 /**
  * \brief An iterator for matches in pg::lex::context objects.
  *
@@ -952,10 +963,10 @@ context< typename detail::string_traits< StrT >::char_type,
  * \see pg::lex::context
  * \see pg::lex::begin
  */
-template< typename StrCharT, typename PatCharT >
+template< typename StrCharT, typename PattternT >
 struct gmatch_iterator
 {
-    gmatch_iterator( const context< StrCharT, PatCharT > & ctx, const StrCharT * start ) noexcept
+    gmatch_iterator( const context< StrCharT, PattternT > & ctx, const StrCharT * start ) noexcept
         : c( ctx )
         , pos( start )
     {}
@@ -1024,10 +1035,10 @@ struct gmatch_iterator
     }
 
 private:
-    const context< StrCharT, PatCharT > c;
-    const StrCharT *                    pos        = nullptr;
-    const StrCharT *                    last_match = nullptr;
-    basic_match_result< StrCharT >      mr;
+    const context< StrCharT, PattternT > c;
+    const StrCharT *                     pos        = nullptr;
+    const StrCharT *                     last_match = nullptr;
+    basic_match_result< StrCharT >       mr;
 };
 
 /**
@@ -1064,13 +1075,13 @@ template< typename StrCharT, typename PatCharT >
  *
  * \return Returns a match result based on the character type of the input string.
  */
-template< typename StrT, typename PatT >
-[[nodiscard]] auto match( StrT&& str, PatT&& pat )
+template< typename StrT, typename PatCharT >
+[[nodiscard]] auto match( StrT && str, const pattern< PatCharT > & pat )
 {
     using str_char_type = typename detail::string_traits< StrT >::char_type;
 
     basic_match_result< str_char_type > mr;
-    const context                       c   = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
+    const context                       c   = { std::forward< StrT >( str ), pat };
     detail::match_state                 ms  = { c.s.begin, c.s.end, c.p.end, mr };
     const str_char_type *               pos = c.s.begin;
 
@@ -1101,6 +1112,15 @@ template< typename StrT, typename PatT >
     return mr;
 }
 
+template< typename StrT, typename PatT,
+          typename detail::string_traits< PatT >::char_type = 0 >  // Terminate recursion of PatT
+[[nodiscard]] auto match( StrT && str, PatT && pat )
+{
+    using PatCharT = typename detail::string_traits< PatT >::char_type;
+
+    return match( std::forward< StrT >( str ), pattern< PatCharT >( pat ) );
+}
+
 /**
  * \brief Substitutes a replacement pattern for a match found in the input string.
  *
@@ -1111,19 +1131,18 @@ template< typename StrT, typename PatT >
  *
  * \return Returns a std::string based on the character type of the input string.
  */
-template< typename StrT, typename PatT, typename ReplT,
+template< typename StrT, typename PatCharT, typename ReplT,
           typename std::enable_if< detail::string_traits< ReplT >::is_string, int >::type = 0 >
-[[nodiscard]] auto gsub( StrT&& str, PatT&& pat, ReplT&& repl, int count = -1 )
+[[nodiscard]] auto gsub( StrT && str, const pattern< PatCharT > & pat, ReplT && repl, int count = -1 )
 {
     static_assert( detail::string_traits< ReplT >::is_string, "Replacement pattern is not one of the supported string-like types!" );
 
     using str_char_type  = typename detail::string_traits< StrT >::char_type;
-    using pat_char_type  = typename detail::string_traits< PatT >::char_type;
     using repl_char_type = typename detail::string_traits< ReplT >::char_type;
-    using iterator_type  = gmatch_iterator< str_char_type, pat_char_type >;
+    using iterator_type  = gmatch_iterator< str_char_type, PatCharT >;
 
     const detail::string_context< repl_char_type > r            = { std::forward< ReplT >( repl ) };
-    const context                                  c            = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
+    const context                                  c            = { std::forward< StrT >( str ), pat };
     auto                                           match_it     = iterator_type( c, c.s.begin );
     const auto                                     match_end_it = end( c );
 
@@ -1193,6 +1212,16 @@ template< typename StrT, typename PatT, typename ReplT,
     return result;
 }
 
+template< typename StrT, typename PatT, typename ReplT,
+          typename std::enable_if< detail::string_traits< ReplT >::is_string, int >::type = 0,
+          typename detail::string_traits< PatT >::char_type = 0 >  // Terminate recursion of PatT
+[[nodiscard]] auto gsub( StrT&& str, PatT && pat, ReplT && repl, int count = -1 )
+{
+    using PatCharT = typename detail::string_traits< PatT >::char_type;
+
+    return gsub( std::forward< StrT >( str ), pattern< PatCharT >( pat ), std::forward< ReplT >( repl ), count );
+}
+
 /**
  * \brief Substitutes a replacement for a match found in the input string.
  *
@@ -1203,15 +1232,14 @@ template< typename StrT, typename PatT, typename ReplT,
  *
  * \return Returns a std::string based on the character type of the input string.
  */
-template< typename StrT, typename PatT, typename Function,
+template< typename StrT, typename PatCharT, typename Function,
           typename std::enable_if< !detail::string_traits< Function >::is_string, int >::type = 0 >
-[[nodiscard]] auto gsub( StrT&& str, PatT&& pat, Function&& func, int count = -1 )
+[[nodiscard]] auto gsub( StrT && str, const pattern< PatCharT > & pat, Function && func, int count = -1 )
 {
     using str_char_type = typename detail::string_traits< StrT >::char_type;
-    using pat_char_type = typename detail::string_traits< PatT >::char_type;
-    using iterator_type = gmatch_iterator< str_char_type, pat_char_type >;
+    using iterator_type = gmatch_iterator< str_char_type, PatCharT >;
 
-    const context c            = { std::forward< StrT >( str ), std::forward< PatT >( pat ) };
+    const context c            = { std::forward< StrT >( str ), pat };
     auto          match_it     = iterator_type( c, c.s.begin );
     const auto    match_end_it = end( c );
 
@@ -1235,6 +1263,16 @@ template< typename StrT, typename PatT, typename Function,
     result.append( copy_begin, c.s.end );
 
     return result;
+}
+
+template< typename StrT, typename PatT, typename Function,
+          typename std::enable_if< !detail::string_traits< Function >::is_string, int >::type = 0,
+          typename detail::string_traits< PatT >::char_type = 0 >  // Terminate recursion of PatT
+[[nodiscard]] auto gsub( StrT && str, PatT && pat, Function && func, int count = -1 )
+{
+    using PatCharT = typename detail::string_traits< PatT >::char_type;
+
+    return gsub( std::forward< StrT >( str ), pattern< PatCharT >( pat ), std::forward< Function >( func ), count );
 }
 
 }
