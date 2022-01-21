@@ -143,6 +143,9 @@ static void match()
         assert_true( f( "0alo alo", "%x*" ) == "0a" );
         assert_true( f( "alo alo", "%C+" ) == "alo alo" );
         assert_true( lex::match( "(álo)", "%(á" ).position().first == 0 );
+        assert_false( lex::match( "==", "^([=]*)=%1$" ) );
+        assert_true( lex::match( "===", "^([=]*)=%1$" ) );
+        assert_false( lex::match( "====", "^([=]*)=%1$" ) );
         assert_false( lex::match( "==========", "^([=]*)=%1$" ) );
     }
 
@@ -188,15 +191,32 @@ static void match()
         assert_true( lex::match( "abc\0efg"sv, "%\0"sv ).position().first == 3 );
         assert_true( lex::match( "abc\0q\0zyz"sv, "%b\0z"sv ).at( 0 ) == "\0q\0zyz"sv );
         assert_true( lex::match( "abczqz\0y\0"sv, "%bz\0"sv ).at( 0 ) == "zqz\0y\0"sv );
+        assert_true( lex::match( "a<b>c"sv, "%b<>c"sv ).at( 0 ) == "<b>c"sv );
+        assert_true( lex::match( "_a<b>c"sv, ".%b<>c"sv ).at( 0 ) == "a<b>c"sv );
         assert_true( lex::match( "abc\0\0\0"sv, "%\0+"sv ).at( 0 ) == "\0\0\0"sv );
         assert_true( lex::match( "abc\0\0\0"sv, "%\0%\0?"sv ).at( 0 ) == "\0\0"sv );
     }
 #endif
 }
 
+static void match_pattern()
+{
+#if ENABLE
+    assert_true( lex::match( "aaa", lex::pattern( "a" ) ) );
+    assert_true( lex::match( "aaa", lex::pattern( "a"sv ) ) );
+    assert_true( lex::match( "aaa", lex::pattern( std::string( "a" ) ) ) );
+    assert_true( lex::match( "aaa", lex::pattern( "a", 1 ) ) );
+    assert_true( lex::match( "aaa", lex::pattern( static_cast< const char * >( "a" ) ) ) );
+#endif
+}
+
 static void gmatch()
 {
 #if ENABLE
+    {
+        assert_true( *begin( lex::context( "aashing ", "[a-z]shing" ) ) );
+    }
+
     {
         int i = 0;
         for( auto& mr : lex::context( "abcde", "()" ) )
@@ -443,6 +463,25 @@ static void gsub()
         auto result = lex::gsub( "trocar tudo em |teste|b| é |beleza|al|", "|([^|]*)|([^|]*)|", f );
         assert_true( result == "trocar tudo em bbbbb é alalalalalal" );
     }
+#endif
+}
+
+static void gsub_pattern()
+{
+#if ENABLE
+    assert_true( lex::gsub( "aaa", lex::pattern( "a" ), "b" ) == "bbb" );
+    assert_true( lex::gsub( "aaa", lex::pattern( "a"sv ), "b" ) == "bbb" );
+    assert_true( lex::gsub( "aaa", lex::pattern( std::string( "a" ) ), "b" ) == "bbb" );
+    assert_true( lex::gsub( "aaa", lex::pattern( "a", 1 ), "b" ) == "bbb" );
+    assert_true( lex::gsub( "aaa", lex::pattern( static_cast< const char * >( "a" ) ), "b" ) == "bbb" );
+
+    const auto b = []( const lex::match_result & ){ return "b"; };
+
+    assert_true( lex::gsub( "aaa", lex::pattern( "a" ), b ) == "bbb" );
+    assert_true( lex::gsub( "aaa", lex::pattern( "a"sv ), b ) == "bbb" );
+    assert_true( lex::gsub( "aaa", lex::pattern( std::string( "a" ) ), b ) == "bbb" );
+    assert_true( lex::gsub( "aaa", lex::pattern( "a", 1 ), b ) == "bbb" );
+    assert_true( lex::gsub( "aaa", lex::pattern( static_cast< const char * >( "a" ) ), b ) == "bbb" );
 #endif
 }
 
@@ -802,8 +841,10 @@ int main( int /* argc */, char * /* argv */[] )
     try
     {
         match();
+        match_pattern();
         gmatch();
         gsub();
+        gsub_pattern();
         exceptions();
         results();
         string_types();
