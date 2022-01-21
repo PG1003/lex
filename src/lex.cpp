@@ -49,20 +49,6 @@ template struct pg::lex::pattern< char16_t >;
 template struct pg::lex::pattern< char32_t >;
 
 
-pg::lex::detail::matchdepth_sentinel::matchdepth_sentinel( int & counter )
-    : m_counter( counter )
-{
-    if( --m_counter < 0 ) PG_LEX_UNLIKELY
-    {
-        throw lex_error( pattern_too_complex );
-    }
-}
-
-pg::lex::detail::matchdepth_sentinel::~matchdepth_sentinel()
-{
-    ++m_counter;
-}
-
 static const char * lex_error_text( pg::lex::error_type code ) noexcept
 {
     switch( code )
@@ -70,7 +56,7 @@ static const char * lex_error_text( pg::lex::error_type code ) noexcept
     case pg::lex::pattern_too_complex:                  return "pattern too complex";
     case pg::lex::pattern_ends_with_percent:            return "malformed pattern (ends with '%%')";
     case pg::lex::pattern_missing_closing_bracket:      return "malformed pattern (missing ']')";
-    case pg::lex::balanced_no_arguments:                return "malformed pattern (missing arguments to '%%b')";
+    case pg::lex::balanced_no_arguments:                return "malformed pattern (missing arguments to '%b')";
     case pg::lex::frontier_no_open_bracket:             return "missing '[' after '%%f' in pattern";
     case pg::lex::capture_too_many:                     return "too many captures";
     case pg::lex::capture_invalid_pattern:              return "invalid pattern capture";

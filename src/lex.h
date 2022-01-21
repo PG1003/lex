@@ -179,15 +179,6 @@ private:
     static_assert( MAXCAPTURES > max_local );
 };
 
-struct matchdepth_sentinel
-{
-    matchdepth_sentinel( int &counter );
-    ~matchdepth_sentinel() noexcept;
-
-private:
-    int &m_counter;
-};
-
 }
 
 template< typename >
@@ -379,14 +370,6 @@ struct match_state
         pos   = { -1, -1 };
     }
 
-    void check_captures() const
-    {
-        if( std::any_of( captures.data(), captures.data() + level, []( const auto & cap ){ return cap.is_unfinished(); } ) ) PG_LEX_UNLIKELY
-        {
-            throw lex_error( capture_not_finished );
-        }
-    }
-
     const StrCharT * const s_begin;
     const StrCharT * const s_end;
     const PatCharT * const p_end;
@@ -399,30 +382,19 @@ struct match_state
 
 
 template< typename StrCharT, typename PatCharT >
-auto match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p ) -> pos_result< StrCharT >;
+auto match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p ) noexcept -> pos_result< StrCharT >;
 
 bool match_class( int c, int cl ) noexcept;
 
 
-template< typename StrCharT, typename PatCharT >
-auto find_bracket_class_end( const match_state< StrCharT, PatCharT > & ms, const PatCharT * p )
+template< typename PatCharT >
+auto find_bracket_class_end( const PatCharT * p ) noexcept
 {
     do
     {
-        if( p == ms.p_end ) PG_LEX_UNLIKELY
+        if( *p == '%' )
         {
-            throw lex_error( pattern_missing_closing_bracket );
-        }
-        else if( *p == '%' )
-        {
-            if( ++p == ms.p_end ) PG_LEX_UNLIKELY  // Skip escapes (e.g. '%]')
-            {
-                throw lex_error( pattern_ends_with_percent );
-            }
-            if( ++p == ms.p_end ) PG_LEX_UNLIKELY
-            {
-                throw lex_error( pattern_missing_closing_bracket );
-            }
+            p += 2;
         }
     }
     while( *p++ != ']' );
@@ -431,7 +403,7 @@ auto find_bracket_class_end( const match_state< StrCharT, PatCharT > & ms, const
 }
 
 template< typename StrCharT, typename PatCharT >
-auto matchbracketclass( const match_state< StrCharT, PatCharT > & ms, const StrCharT c, const PatCharT * p ) -> pos_result< PatCharT >
+auto matchbracketclass( const match_state< StrCharT, PatCharT > & ms, const StrCharT c, const PatCharT * p ) noexcept -> pos_result< PatCharT >
 {
     using uchar_t = typename common_unsigned_char< StrCharT, PatCharT >::type;
 
@@ -446,18 +418,9 @@ auto matchbracketclass( const match_state< StrCharT, PatCharT > & ms, const StrC
 
     do
     {
-        if( p == ms.p_end ) PG_LEX_UNLIKELY
-        {
-            throw lex_error( pattern_missing_closing_bracket );
-        }
-
         if( *p == '%' )
         {
             ++p;    // Skip escapes (e.g. '%]')
-            if( p == ms.p_end ) PG_LEX_UNLIKELY
-            {
-                throw lex_error( pattern_ends_with_percent );
-            }
             if( match_class( uc, *p ) )
             {
                 return { p + 1, ret };
@@ -487,34 +450,36 @@ auto matchbracketclass( const match_state< StrCharT, PatCharT > & ms, const StrC
 
 
 template< typename StrCharT, typename PatCharT >
-auto single_match_pr( const match_state< StrCharT, PatCharT > & ms,  const StrCharT * s, const PatCharT * p ) -> pos_result< PatCharT >
+auto single_match_pr( const match_state< StrCharT, PatCharT > & ms,  const StrCharT * s, const PatCharT * p ) noexcept -> pos_result< PatCharT >
 {
     using uchar_t = typename common_unsigned_char< StrCharT, PatCharT >::type;
 
-    const bool s_end = s < ms.s_end;
+    const bool not_end = s < ms.s_end;
 
     switch( *p )
     {
     case '.':
-        return { p + 1, s_end }; // Matches any char
+        return { p + 1, not_end }; // Matches any char
 
     case '%':
-        return { p + 2, s_end && match_class( static_cast< uchar_t >( *s ), *( p + 1 ) ) };
+        return { p + 2, not_end && match_class( static_cast< uchar_t >( *s ), *( p + 1 ) ) };
 
     case '[':
-    {
-        auto [ ep, res ] = matchbracketclass( ms, *s, p );
-        return { find_bracket_class_end( ms, ep ), res };
-    }
+        if( not_end )
+        {
+            auto [ ep, res ] = matchbracketclass( ms, *s, p );
+            return { find_bracket_class_end( ep ), res };
+        }
+        return { find_bracket_class_end( p ), false };
 
     default:
-        return { p + 1, s_end && static_cast< uchar_t >( *s ) == static_cast< uchar_t >( *p ) };
+        return { p + 1, not_end && static_cast< uchar_t >( *s ) == static_cast< uchar_t >( *p ) };
     }
 }
 
 
 template< typename StrCharT, typename PatCharT >
-bool single_match( const match_state< StrCharT, PatCharT > & ms, StrCharT c, const PatCharT * p )
+bool single_match( const match_state< StrCharT, PatCharT > & ms, StrCharT c, const PatCharT * p ) noexcept
 {
     using uchar_t = typename common_unsigned_char< StrCharT, PatCharT >::type;
 
@@ -536,14 +501,10 @@ bool single_match( const match_state< StrCharT, PatCharT > & ms, StrCharT c, con
 
 
 template< typename StrCharT, typename PatCharT >
-const StrCharT * matchbalance( const match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p )
+const StrCharT * matchbalance( const match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p ) noexcept
 {
     using uchar_t = typename common_unsigned_char< StrCharT, PatCharT >::type;
 
-    if( p >= ms.p_end ) PG_LEX_UNLIKELY
-    {
-        throw lex_error( balanced_no_arguments );
-    }
     if( static_cast< uchar_t >( *s ) != static_cast< uchar_t >( *p ) )
     {
         return nullptr;
@@ -574,7 +535,7 @@ const StrCharT * matchbalance( const match_state< StrCharT, PatCharT > & ms, con
 
 
 template< typename StrCharT, typename PatCharT >
-auto max_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep ) -> pos_result< StrCharT >
+auto max_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep ) noexcept -> pos_result< StrCharT >
 {
     ptrdiff_t i = 0;
     while( ( s + i ) < ms.s_end && single_match( ms, *( s + i ), p ) )
@@ -596,7 +557,7 @@ auto max_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, con
 
 
 template< typename StrCharT, typename PatCharT >
-auto min_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep ) -> pos_result< StrCharT >
+auto min_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p, const PatCharT * ep ) noexcept -> pos_result< StrCharT >
 {
     for( ; ; )
     {
@@ -617,13 +578,8 @@ auto min_expand( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, con
 
 
 template< typename StrCharT, typename PatCharT >
-auto start_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p )
+auto start_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p ) noexcept
 {
-    if( ms.level >= MAXCAPTURES ) PG_LEX_UNLIKELY
-    {
-        throw lex_error( capture_too_many );
-    }
-
     ms.captures[ ms.level ].init( s );
 
     if( *p == ')' )
@@ -650,7 +606,7 @@ auto start_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, 
 
 
 template< typename StrCharT, typename PatCharT >
-auto end_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p ) -> pos_result< StrCharT >
+auto end_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p ) noexcept -> pos_result< StrCharT >
 {
     int i = ms.level;
     for( --i ; i >= 0 ; --i )
@@ -670,21 +626,14 @@ auto end_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, co
         }
     }
 
-    throw lex_error( capture_invalid_pattern );
+    return { s, false };
 }
 
 
 template< typename StrCharT, typename PatCharT >
-auto match_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, PatCharT c ) -> pos_result< StrCharT >
+auto match_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, PatCharT c ) noexcept -> pos_result< StrCharT >
 {
-    const int i = c - '1';
-
-    if( i < 0 || i >= ms.level ||
-        ms.captures[ i ].is_unfinished() ) PG_LEX_UNLIKELY
-    {
-        throw lex_error( capture_invalid_index );
-    }
-
+    const int i              = c - '1';
     const int len            = ms.captures[ i ].len();
     const StrCharT * c_begin = ms.captures[ i ].init();
     const StrCharT * c_end   = c_begin + len;
@@ -699,10 +648,8 @@ auto match_capture( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, 
 
 
 template< typename StrCharT, typename PatCharT >
-auto match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p ) -> pos_result< StrCharT >
+auto match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const PatCharT * p ) noexcept -> pos_result< StrCharT >
 {
-    const matchdepth_sentinel mds( ms.matchdepth );
-
     while( p != ms.p_end )
     {
         switch( *p )
@@ -734,11 +681,6 @@ auto match( match_state< StrCharT, PatCharT > & ms, const StrCharT * s, const Pa
 
             case 'f':  // Frontier?
                 p += 2;
-                if( *p != '[' ) PG_LEX_UNLIKELY
-                {
-                    throw lex_error( frontier_no_open_bracket );
-                }
-                else
                 if( matchbracketclass( ms, *s, p ).second )
                 {
                     const StrCharT previous = ( s == ms.s_begin ) ? '\0' : *( s - 1 );
@@ -855,34 +797,169 @@ extern template struct string_context< char8_t >;
 extern template struct string_context< char16_t >;
 extern template struct string_context< char32_t >;
 
+
+template< typename CharT >
+auto find_bracket_class_end( const CharT * p, const CharT * ep )
+{
+    do
+    {
+        if( p == ep ) PG_LEX_UNLIKELY
+        {
+            throw lex_error( pattern_missing_closing_bracket );
+        }
+        else if( *p == '%' )
+        {
+            if( ++p == ep ) PG_LEX_UNLIKELY  // Skip escapes (e.g. '%]')
+            {
+                throw lex_error( pattern_ends_with_percent );
+            }
+            if( ++p == ep ) PG_LEX_UNLIKELY
+            {
+                throw lex_error( pattern_missing_closing_bracket );
+            }
+        }
+    }
+    while( *p++ != ']' );
+
+    return p;
+}
+
 }
 
 
 template< typename CharT  >
 struct pattern
 {
-    pattern( const CharT * p ) noexcept
+    pattern( const CharT * p )
         : pattern( p, std::char_traits< CharT >::length( p ) )
     {}
 
-    pattern( const CharT * p, size_t l ) noexcept
+    pattern( const CharT * const p, size_t l )
         : end( p + l )
         , anchor( p < end && *p == '^' )
         , begin( anchor ? p + 1 : p )
-    {}
+    {
+        enum class capture_state { available, unfinished, finished };
+
+        int           depth                   = 0;
+        capture_state captures[ MAXCAPTURES ] = {};
+        int           capture_level           = 0;
+
+        auto q = begin;
+        while( q < end )
+        {
+            switch( *q )
+            {
+            case '(':
+                if( capture_level > MAXCAPTURES ) PG_LEX_UNLIKELY
+                {
+                    throw lex_error( capture_too_many );
+                }
+                captures[ capture_level++ ] = capture_state::unfinished;
+                ++q;
+                ++depth;
+                continue;
+
+            case ')':
+            {
+                auto level = capture_level;
+                while( --level >= 0 )
+                {
+                    if( captures[ level ] == capture_state::unfinished )
+                    {
+                        captures[ level ] = capture_state::finished;
+                        break;
+                    }
+                }
+                if( level < 0 ) PG_LEX_UNLIKELY
+                {
+                    throw lex_error( capture_invalid_pattern );
+                }
+                ++q;
+                ++depth;
+                continue;
+            }
+
+            case '$':
+                ++q;
+                continue;
+
+            case '%':
+                if( ++q == end ) PG_LEX_UNLIKELY
+                {
+                    throw lex_error( pattern_ends_with_percent );
+                }
+                switch( *q )
+                {
+                case 'b':
+                    q += 3;
+                    if( q > end ) PG_LEX_UNLIKELY
+                    {
+                        throw lex_error( balanced_no_arguments );
+                    }
+                    continue;
+
+                case 'f':
+                    if( *( ++q ) != '[' ) PG_LEX_UNLIKELY
+                    {
+                        throw lex_error( frontier_no_open_bracket );
+                    }
+                    q = detail::find_bracket_class_end( q, end );
+                    continue;
+
+                case '0': case '1': case '2': case '3': case '4':
+                case '5': case '6': case '7': case '8': case '9':
+                    if( const int i = *q - '1' ; i < 0 ||
+                                                 i >= capture_level ||
+                                                 captures[ i ] != capture_state::finished ) PG_LEX_UNLIKELY
+                    {
+                        throw lex_error( capture_invalid_index );
+                    }
+                    ++q;
+                    continue;
+                }
+            }
+
+            if( q != end && *q == '[' )
+            {
+                q = detail::find_bracket_class_end( q, end );
+            }
+            else
+            {
+                ++q;
+            }
+            if( q != end && ( *q == '*' || *q == '+' || *q == '?' || *q == '-' ) )
+            {
+                ++q;
+            }
+
+            ++depth;
+        }
+
+        if( std::any_of( captures, captures + capture_level,
+                         []( const auto cap ){ return cap != capture_state::finished; } ) ) PG_LEX_UNLIKELY
+        {
+            throw lex_error( capture_not_finished );
+        }
+
+        if( depth > MAXCCALLS ) PG_LEX_UNLIKELY
+        {
+            throw lex_error( pattern_too_complex );
+        }
+    }
 
     template< size_t N >
-    pattern( const CharT( & p )[ N ] ) noexcept
+    pattern( const CharT( & p )[ N ] )
         : pattern( p, N )
     {}
 
     template< typename Traits, typename Allocator >
-    pattern( const std::basic_string< CharT, Traits, Allocator > & s ) noexcept
+    pattern( const std::basic_string< CharT, Traits, Allocator > & s )
         : pattern( s.data(), s.size() )
     {}
 
     template< typename Traits >
-    pattern( const std::basic_string_view< CharT, Traits > & s ) noexcept
+    pattern( const std::basic_string_view< CharT, Traits > & s )
         : pattern( s.data(), s.size() )
     {}
 
@@ -990,7 +1067,6 @@ struct gmatch_iterator
             }
             else
             {
-                ms.check_captures();
                 ms.pos = { static_cast< int >( pos - c.s.begin ), static_cast< int >( e - c.s.begin ) };
                 if( ms.level == 0 )
                 {
@@ -1090,7 +1166,6 @@ template< typename StrT, typename PatCharT >
         auto [ e, r ] = detail::match( ms, pos, c.p.begin );
         if( r )
         {
-            ms.check_captures();
             ms.pos = { static_cast< int >( pos - c.s.begin ), static_cast< int >( e - c.s.begin ) };
             if( ms.level == 0 )
             {
@@ -1104,7 +1179,6 @@ template< typename StrT, typename PatCharT >
         else
         {
             pos = e + 1;
-            ms.check_captures();
         }
     }
     while( pos <= c.s.end && !c.p.anchor );
