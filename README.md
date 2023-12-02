@@ -5,7 +5,7 @@ A C++ library for Lua style pattern matching.
 The standard library of the Lua program language includes a minimalistic pattern matching capability with features you won't find in common regular expressions implementations.
 This library provides an easy integration of Lua style pattern matching into your C++ application.
 
-The library is tested by a simple [test program](https://github.com/PG1003/lex/blob/master/test/tests.cpp) that includes tests which are ported from the Lua test suite.
+The library is tested by a simple [test program](https://github.com/PG1003/lex/blob/master/test/tests.cpp) that includes tests that are ported from the Lua test suite.
 There are additional tests to verify parts that are specific for the implementation of this library.  
 You can also use the test program to toy with the library.
 
@@ -20,7 +20,7 @@ The features listed here are specific for this implementation, not about the cap
 * Full compatability with the match patterns as implemented in Lua 5.4. 
 * Support for a wide range of string types such as std::string, std::string_view, character arrays and pointers. All of these can be based on the character types as defined by C++17 and C++20.
 * Match a string with a pattern.
-* Substitute a matching pattern by a replacement pattern or the result of a function which is called for each match.
+* Substitute a matching pattern by a replacement pattern or the result of a function that is called for each match.
 * Iterate over a string with a pattern.
 
 ## Requirements
@@ -71,7 +71,7 @@ Output:
 auto str = u"foo = 42;   bar= 1337; baz = PG =1003 ;";
 
 // 2 Iterate over all key/value pairs.
-for( auto match : pg::lex::context( str, "(%a+)%s*=%s*(%d+)%s*;" ) )
+for( auto match : pg::lex::gmatch( str, "(%a+)%s*=%s*(%d+)%s*;" ) )
 {
     // 3 The match should have 2 captures.
     assert( match.size() == 2 );
@@ -141,9 +141,12 @@ You can get the exception description and number by calling the `what()` and `co
 
 ### Match result
 
-A successful match returns a match result that contains one or more [captures](#captures), the position and size of the matched substring. 
+A successful match returns a match result that contains one or more [captures](#captures), the position and size of the matched substring.
 The number of captures depends on the pattern; the captures defined in the pattern or one for whole match when the pattern doesn't have captures.
-For convenience a match result has een `operator bool` that returns true when it contains at least one capture. 
+For convenience a match result has an `operator bool` that returns true when it contains at least one capture.
+
+A capture has a reference to a part of the input string.
+This means that the input string must be available when reading the result of the capture.
 
 A match result is templated on the character type of the input string.
 The following predefined match result types are made available in the `pg::lex` namespace;
@@ -167,8 +170,8 @@ An empty match result is returned when no match was found.
 
 ### Iteration
 
-To itereate over matches in a string you must create a context.
-A context is a `pg::lex::context` object with a reference to a input string and a pattern.
+To itereate over matches in a string you create a context by calling the `pg::lex::gmatch` function.
+A context is a `pg::lex::gmatch_context` object with a reference to a input string and a pattern.
 
 You get a `pg::lex::gmatch_iterator` by calling the `pg::lex::begin` and `pg::lex::end` functions with a context as parameter.
 A `pg::lex::gmatch_iterator` behaves like a forward iterator; it can only advance with the `++` operator.
@@ -177,7 +180,8 @@ Gmatch iterators return match results when you dereference them.
 The `pg::lex::begin` function creates an iterator and searches for the first match in the input string.
 The returned iterator is equal to the iterator returned by `pg::lex::end` when no match was found.
 
-A `pg::lex::context` is compatible with ranged based for-loops as shown in the [Iterate with a pattern](#iterate-with-a-pattern) example.
+A `pg::lex::gmatch_context` is compatible with ranged based for-loops as shown in the [Iterate with a pattern](#iterate-with-a-pattern) example.
+However prefer using the `pg::lex::gmatch` function over instantiating a `pg::lex::gmatch_context` object for readability.
 
 ### Substitute
 
