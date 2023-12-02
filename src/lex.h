@@ -978,41 +978,43 @@ extern template struct pattern< char32_t >;
 
 
 /**
- * \brief A lex context is an input string combined with a pattern.
+ * \brief A lex gmatch_context is an input string combined with a pattern.
  *
  * You can get a pg::lex::gmatch_iterator using the pg::lex::begin and pg::lex::end functions and
  * iterate with it over all matches in a lex context.
  *
- * A lex context also works with ranged based for-loops.
+ * A lex gmatch_context also works with ranged based for-loops but using the
+ * pg::lex::gmatch function is prefered.
  *
  * \note A lex context keeps a reference to the input string and pattern.
  *
  * \tparam StrCharT The char type of the input string.
  * \tparam PatCharT The char type of the pattern.
  *
+ * \see pg::lex::gmatch
+ * \see pg::lex::gmatch_iterator
  * \see pg::lex::begin
  * \see pg::lex::end
- * \see pg::lex::gmatch_iterator
  */
 template< typename StrCharT, typename PatCharT >
-struct context
+struct gmatch_context
 {
     const detail::string_context< StrCharT > s;
     const pattern< PatCharT >                p;
 
     template< typename StrT, typename PatT >
-    context( StrT && s, PatT && p ) noexcept
+    gmatch_context( StrT && s, PatT && p ) noexcept
         : s( std::forward< StrT >( s ) )
         , p( std::forward< PatT >( p ) )
     {}
 
     template< typename StrT, typename PatCharT_ >
-    context( StrT && s, const pattern< PatCharT_ > & p ) noexcept
+    gmatch_context( StrT && s, const pattern< PatCharT_ > & p ) noexcept
         : s( std::forward< StrT >( s ) )
         , p( p )
     {}
 
-    [[nodiscard]] bool operator ==( const context< StrCharT, PatCharT >& other ) const noexcept
+    [[nodiscard]] bool operator ==( const gmatch_context< StrCharT, PatCharT >& other ) const noexcept
     {
         return s.begin == other.s.begin && s.end == other.s.end &&
                p.begin == other.p.begin && p.end == other.p.end;
@@ -1020,13 +1022,13 @@ struct context
 };
 
 template< typename StrT, typename PatT >
-context( StrT &&, PatT && ) noexcept ->
-context< typename detail::string_traits< StrT >::char_type,
-         typename detail::string_traits< PatT >::char_type >;
+gmatch_context( StrT &&, PatT && ) noexcept ->
+gmatch_context< typename detail::string_traits< StrT >::char_type,
+                typename detail::string_traits< PatT >::char_type >;
 
 template< typename StrT, typename PatCharT >
-context( StrT &&, const pattern< PatCharT > & ) noexcept ->
-context< typename detail::string_traits< StrT >::char_type, PatCharT >;
+gmatch_context( StrT &&, const pattern< PatCharT > & ) noexcept ->
+gmatch_context< typename detail::string_traits< StrT >::char_type, PatCharT >;
 
 
 /**
@@ -1037,13 +1039,15 @@ context< typename detail::string_traits< StrT >::char_type, PatCharT >;
  *
  * The iterator behaves as a forward iterator and can only advance with the `++` operator.
  *
- * \see pg::lex::context
+ * \see pg::lex::gmatch
+ * \see pg::lex::gmatch_context
  * \see pg::lex::begin
+ * \see pg::lex::end
  */
 template< typename StrCharT, typename PattternT >
 struct gmatch_iterator
 {
-    gmatch_iterator( const context< StrCharT, PattternT > & ctx, const StrCharT * start ) noexcept
+    gmatch_iterator( const gmatch_context< StrCharT, PattternT > & ctx, const StrCharT * start ) noexcept
         : c( ctx )
         , pos( start )
     {}
@@ -1111,10 +1115,10 @@ struct gmatch_iterator
     }
 
 private:
-    const context< StrCharT, PattternT > c;
-    const StrCharT *                     pos        = nullptr;
-    const StrCharT *                     last_match = nullptr;
-    basic_match_result< StrCharT >       mr;
+    const gmatch_context< StrCharT, PattternT > c;
+    const StrCharT *                            pos        = nullptr;
+    const StrCharT *                            last_match = nullptr;
+    basic_match_result< StrCharT >              mr;
 };
 
 /**
@@ -1127,7 +1131,7 @@ private:
  * \see pg::lex::end
  */
 template< typename StrCharT, typename PatCharT >
-[[nodiscard]] auto begin( const context< StrCharT, PatCharT > & c )
+[[nodiscard]] auto begin( const gmatch_context< StrCharT, PatCharT > & c )
 {
     auto it = gmatch_iterator( c, c.s.begin );
     return ++it;
@@ -1139,11 +1143,25 @@ template< typename StrCharT, typename PatCharT >
  * The result of the end iterator is always an empty match result.
  *
  * \see pg::lex::gmatch_iterator
+ * \see pg::lex::begin
  */
 template< typename StrCharT, typename PatCharT >
-[[nodiscard]] auto end( const context< StrCharT, PatCharT > & c ) noexcept
+[[nodiscard]] auto end( const gmatch_context< StrCharT, PatCharT > & c ) noexcept
 {
     return gmatch_iterator( c, c.s.end + 1 );
+}
+
+/**
+ * \brief Returns a pg::lex::gmatch_context that is used to iterate with a pattern over string.
+ *
+ * This function is most likely to be used with a range-based for.
+ *
+ * \see pg::lex::gmatch_context
+ */
+template< typename StrT, typename PatT >
+[[nodiscard]] auto gmatch( StrT && str, PatT && pat ) noexcept
+{
+    return gmatch_context( std::forward< StrT >( str ), std::forward< PatT >( pat ) );
 }
 
 /**
@@ -1157,7 +1175,7 @@ template< typename StrT, typename PatCharT >
     using str_char_type = typename detail::string_traits< StrT >::char_type;
 
     basic_match_result< str_char_type > mr;
-    const context                       c   = { std::forward< StrT >( str ), pat };
+    const auto                          c   = gmatch( std::forward< StrT >( str ), pat );
     detail::match_state                 ms  = { c.s.begin, c.s.end, c.p.end, mr };
     const str_char_type *               pos = c.s.begin;
 
@@ -1216,7 +1234,7 @@ template< typename StrT, typename PatCharT, typename ReplT,
     using iterator_type  = gmatch_iterator< str_char_type, PatCharT >;
 
     const detail::string_context< repl_char_type > r            = { std::forward< ReplT >( repl ) };
-    const context                                  c            = { std::forward< StrT >( str ), pat };
+    const auto                                     c            = gmatch( std::forward< StrT >( str ), pat );
     auto                                           match_it     = iterator_type( c, c.s.begin );
     const auto                                     match_end_it = end( c );
 
@@ -1313,9 +1331,9 @@ template< typename StrT, typename PatCharT, typename Function,
     using str_char_type = typename detail::string_traits< StrT >::char_type;
     using iterator_type = gmatch_iterator< str_char_type, PatCharT >;
 
-    const context c            = { std::forward< StrT >( str ), pat };
-    auto          match_it     = iterator_type( c, c.s.begin );
-    const auto    match_end_it = end( c );
+    const auto c            = gmatch( std::forward< StrT >( str ), pat );
+    auto       match_it     = iterator_type( c, c.s.begin );
+    const auto match_end_it = end( c );
 
     std::basic_string< str_char_type > result;
     result.reserve( c.s.end - c.s.begin );

@@ -214,12 +214,12 @@ static void gmatch()
 {
 #if ENABLE
     {
-        assert_true( *begin( lex::context( "aashing ", "[a-z]shing" ) ) );
+        assert_true( *begin( lex::gmatch_context( "aashing ", "[a-z]shing" ) ) );
     }
 
     {
         int i = 0;
-        for( auto& mr : lex::context( "abcde", "()" ) )
+        for( const auto& mr : lex::gmatch( "abcde", "()" ) )
         {
             assert_true( mr.size() == 1 );
             ++i;
@@ -229,11 +229,10 @@ static void gmatch()
 
     {
         std::vector< std::string > v;
-        auto lc = lex::context( "first second word", "%w+" );
-        for( auto it = begin( lc ) ; it != end( lc ) ; ++ it )
+        for( const auto& mr : lex::gmatch( "first second word", "%w+" ) )
         {
-            assert_true( it->size() == 1 );
-            v.emplace_back( it->at( 0 ) );
+            assert_true( mr.size() == 1 );
+            v.emplace_back( mr.at( 0 ) );
         }
         assert_true( v.size() == 3 );
         assert_true( v[ 0 ] == "first" );
@@ -243,7 +242,7 @@ static void gmatch()
     {
         std::vector< int > v = { 2, 5, 8 };
         std::string str      = "xuxx uu ppar r";
-        for( auto& mr : lex::context( std::string_view( str ), "()(.)%2" ) )
+        for( const auto& mr : lex::gmatch( std::string_view( str ), "()(.)%2" ) )
         {
             assert_true( mr.size() == 2 );
             auto m = mr.at( 0 );
@@ -256,7 +255,7 @@ static void gmatch()
     }
     {
         int i = 0;
-        for( auto& mr : lex::context( "13 14 10 = 11, 15= 16, 22=23", "(%d+)%s*=%s*(%d+)" ) )
+        for( const auto& mr : lex::gmatch( "13 14 10 = 11, 15= 16, 22=23", "(%d+)%s*=%s*(%d+)" ) )
         {
             assert_true( mr.size() == 2 );
             auto m0 = mr.at( 0 );
@@ -271,18 +270,18 @@ static void gmatch()
     }
 
     {
-          std::string result;
-          std::string str( "a  \nbc\t\td" );
-          int i = 0;
-          for( auto& mr : lex::context( str, "()%s*()" ) )
-          {
-              const auto pos     = mr.position();
-              const auto sub_str = str.substr( i, pos.first - i );
-              i                  = pos.second;
-              result.append( sub_str );
-              result.append( "-" );
-          }
-          assert_true( result == "-a-b-c-d-" );
+        std::string result;
+        std::string str( "a  \nbc\t\td" );
+        int i = 0;
+        for( const auto& mr : lex::gmatch( str, "()%s*()" ) )
+        {
+            const auto pos     = mr.position();
+            const auto sub_str = str.substr( i, pos.first - i );
+            i                  = pos.second;
+            result.append( sub_str );
+            result.append( "-" );
+        }
+        assert_true( result == "-a-b-c-d-" );
     }
 
     {
@@ -290,7 +289,7 @@ static void gmatch()
 
         auto str  = "abcde";
 
-        auto c_1        = lex::context( str, "ab" );
+        auto c_1        = lex::gmatch_context( str, "ab" );
         auto it_1_begin = iterator( c_1, c_1.s.begin );
         ++it_1_begin;
         assert_true( *it_1_begin );
@@ -298,7 +297,7 @@ static void gmatch()
         auto it_1_end   = lex::end( c_1 );
         assert_true( it_1_begin != it_1_end );
 
-        auto c_2        = lex::context( str, "^ab" );
+        auto c_2        = lex::gmatch_context( str, "^ab" );
         auto it_2_begin = iterator( c_2, c_2.s.begin );
         ++it_2_begin;
         assert_true( *it_2_begin );
@@ -306,13 +305,13 @@ static void gmatch()
         auto it_2_end   = lex::end( c_2 );
         assert_true( it_2_begin != it_2_end );
 
-        auto c_3        = lex::context( str, "bc" );
+        auto c_3        = lex::gmatch_context( str, "bc" );
         auto it_3_begin = iterator( c_3, c_3.s.begin );
         ++it_3_begin;
         auto it_3_end   = lex::end( c_3 );
         assert_true( it_3_begin != it_3_end );
 
-        auto c_4        = lex::context( str, "^bc" );
+        auto c_4        = lex::gmatch_context( str, "^bc" );
         auto it_4_begin = iterator( c_4, c_4.s.begin );
         ++it_4_begin;
         auto it_4_end   = lex::end( c_4 );
@@ -393,7 +392,7 @@ static void gsub()
         assert_true( lex::gsub( "function", "%f[^\x01-\xFF]", "." ) == "function." );
 
         std::vector< int > a = { 0, 4, 8, 13, 16 };
-        for( auto& mr : lex::context( "alo alo th02 is 1hat", "()%f[%w%d]" ) )
+        for( auto& mr : lex::gmatch_context( "alo alo th02 is 1hat", "()%f[%w%d]" ) )
         {
             assert_true( a.front() == mr.position().first );
             a.erase( a.cbegin() );
@@ -409,7 +408,7 @@ static void gsub()
         const auto strset = [&]( auto p )
         {
             std::string res;
-            for( auto mr : lex::context( sv, p ) )
+            for( auto mr : lex::gmatch_context( sv, p ) )
             {
                 res.append( mr.at( 0 ) );
             }
@@ -436,7 +435,7 @@ static void gsub()
         const auto strset = [&]( auto p )
         {
             std::u32string res;
-            for( auto mr : lex::context( sv, p ) )
+            for( auto mr : lex::gmatch_context( sv, p ) )
             {
                 res.append( mr.at( 0 ) );
             }
@@ -554,7 +553,7 @@ static void results()
 #if ENABLE
     {
         int i = 0;
-        for( auto& mr : lex::context( "13 14 10 = 11, 15= 16, 22=23", "(%d+)%s*=%s*(%d+)" ) )
+        for( auto& mr : lex::gmatch_context( "13 14 10 = 11, 15= 16, 22=23", "(%d+)%s*=%s*(%d+)" ) )
         {
             assert_true( mr.size() == 2 );
             lex::match_result::iterator     it;
@@ -772,7 +771,7 @@ static void readme_examples()
         std::vector< std::pair< std::u16string_view, std::u16string_view > > results;
 
         auto str = u"foo = 42;   bar= 1337; baz = PG =1003 ;";
-        for( auto & match : lex::context( str, "(%a+)%s*=%s*(%d+)%s*;" ) )
+        for( auto & match : lex::gmatch( str, "(%a+)%s*=%s*(%d+)%s*;" ) )
         {
             assert_true( match.size() == 2 );
             results.emplace_back( match.at( 0 ), match.at( 1 ) );
@@ -826,7 +825,7 @@ static void readme_examples()
     {
         std::array< std::pair< int, int >, 3 > expected = { std::pair{ 0, 1 }, std::pair{ 2, 2 }, std::pair{ 3, 3 } };
         std::vector< std::pair< int, int > >   results;
-        for( const auto& match : pg::lex::context( "abc", "()a*()" ) )
+        for( const auto& match : pg::lex::gmatch_context( "abc", "()a*()" ) )
         {
             results.push_back( match.position() );
         }
